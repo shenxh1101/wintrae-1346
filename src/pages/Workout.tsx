@@ -27,7 +27,7 @@ export default function Workout() {
   const navigate = useNavigate();
   const { getCourseById } = useCourseStore();
   const { addRecord } = useHistoryStore();
-  const { getCurrentMember, recordWorkout } = useMemberStore();
+  const { getCurrentMember } = useMemberStore();
   const [recordSaved, setRecordSaved] = useState(false);
 
   const {
@@ -76,12 +76,11 @@ export default function Workout() {
         memberId: currentMember.id,
       };
       addRecord(fullRecord);
-      recordWorkout(currentMember.id);
       setRecordSaved(true);
       return fullRecord;
     }
     return null;
-  }, [recordSaved, completeWorkout, currentMember, addRecord, recordWorkout]);
+  }, [recordSaved, completeWorkout, currentMember, addRecord]);
 
   const handlePlayPause = useCallback(() => {
     if (isCompleted) return;

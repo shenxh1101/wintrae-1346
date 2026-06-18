@@ -18,7 +18,7 @@ export default function HistoryPage() {
   const stats = getMemberStats(currentMemberId);
   const weeklyStats = getWeeklyStats(currentMemberId, reportRange);
   const weeklyReport = currentMember
-    ? getWeeklyReport(currentMemberId, currentMember.name, reportRange)
+    ? getWeeklyReport(currentMemberId, currentMember.name, reportRange, childMode)
     : null;
   const streakDays = calculateStreakDays(currentMemberId);
   const weeklyProgress = getWeeklyProgress(currentMemberId);
@@ -193,22 +193,21 @@ export default function HistoryPage() {
             </div>
 
             {/* 本周计划进度 */}
-            {weekPlans.length > 0 && (
+            {weeklyProgress.total > 0 && (
               <div className="tv-card mb-10">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-bold text-white flex items-center gap-3">
                     <Target className="w-6 h-6 text-mint-green" />
-                    本周训练计划
+                    本周训练计划进度
                   </h3>
-                  <span className="text-mint-green font-medium">
-                    {weeklyProgress.completed} / {weeklyProgress.total} 已完成
-                  </span>
                 </div>
 
                 <div className="mb-6">
                   <div className="flex items-center justify-between text-sm mb-2">
                     <span className="text-text-secondary">完成进度</span>
-                    <span className="text-white font-medium">{weeklyProgress.percentage}%</span>
+                    <span className="text-white font-medium">
+                      完成 {weeklyProgress.completed}/{weeklyProgress.total}（{weeklyProgress.percentage}%）
+                    </span>
                   </div>
                   <div className="h-3 bg-navy-medium rounded-full overflow-hidden">
                     <div
@@ -218,43 +217,19 @@ export default function HistoryPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  {weekPlans.map((plan) => (
-                    <div
-                      key={plan.id}
-                      className="flex items-center justify-between p-4 bg-navy-medium/50 rounded-xl"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          'w-10 h-10 rounded-full flex items-center justify-center',
-                          plan.completedCount >= plan.targetCount
-                            ? 'bg-mint-green/20 text-mint-green'
-                            : 'bg-navy-medium text-text-secondary'
-                        )}>
-                          {plan.completedCount >= plan.targetCount ? (
-                            <CheckCircle className="w-5 h-5" />
-                          ) : (
-                            <BarChart3 className="w-5 h-5" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium text-white">{plan.courseTitle}</p>
-                          <p className="text-sm text-text-muted">
-                            {plan.reminderTime && `提醒：${plan.reminderTime}`}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className={cn(
-                          'text-lg font-bold',
-                          plan.completedCount >= plan.targetCount ? 'text-mint-green' : 'text-white'
-                        )}>
-                          {plan.completedCount}/{plan.targetCount}
-                        </p>
-                        <p className="text-xs text-text-muted">次</p>
-                      </div>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="p-4 bg-navy-medium/50 rounded-xl text-center">
+                    <p className="text-3xl font-bold text-mint-green">{weeklyProgress.completed}</p>
+                    <p className="text-sm text-text-secondary mt-1">已完成</p>
+                  </div>
+                  <div className="p-4 bg-navy-medium/50 rounded-xl text-center">
+                    <p className="text-3xl font-bold text-soft-yellow">{weeklyProgress.skipped}</p>
+                    <p className="text-sm text-text-secondary mt-1">跳过</p>
+                  </div>
+                  <div className="p-4 bg-navy-medium/50 rounded-xl text-center">
+                    <p className="text-3xl font-bold text-orange-400">{weeklyProgress.missed}</p>
+                    <p className="text-sm text-text-secondary mt-1">未完成</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -451,25 +426,26 @@ export default function HistoryPage() {
             </div>
 
             {/* 本周计划完成情况 */}
-            {reportRange === 'week' && weekPlans.length > 0 && (
+            {reportRange === 'week' && weeklyReport.planReview.length > 0 && (
               <div className="tv-card mb-8">
                 <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
                   <Award className="w-6 h-6 text-soft-yellow" />
                   计划完成情况
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
-                  {weekPlans.map((plan) => {
-                    const percentage = Math.round((plan.completedCount / plan.targetCount) * 100);
-                    const isCompleted = plan.completedCount >= plan.targetCount;
+                  {weeklyReport.planReview.map((review) => {
+                    const total = review.completedOnTime + review.completedMakeup;
+                    const percentage = Math.round((total / review.scheduled) * 100);
+                    const isCompleted = total >= review.scheduled;
                     return (
-                      <div key={plan.id} className="p-4 bg-navy-medium/50 rounded-xl">
+                      <div key={review.planId} className="p-4 bg-navy-medium/50 rounded-xl">
                         <div className="flex items-center justify-between mb-3">
-                          <span className="font-medium text-white">{plan.courseTitle}</span>
+                          <span className="font-medium text-white">{review.courseTitle}</span>
                           <span className={cn(
                             'text-sm font-bold',
                             isCompleted ? 'text-mint-green' : 'text-vibrant-orange'
                           )}>
-                            {plan.completedCount}/{plan.targetCount} 次
+                            {total}/{review.scheduled} 次
                           </span>
                         </div>
                         <div className="h-2 bg-navy-medium rounded-full overflow-hidden">
@@ -483,11 +459,12 @@ export default function HistoryPage() {
                             style={{ width: `${Math.min(percentage, 100)}%` }}
                           />
                         </div>
-                        {plan.reminderTime && (
-                          <p className="text-xs text-text-muted mt-2">
-                            每日提醒：{plan.reminderTime}
-                          </p>
-                        )}
+                        <div className="flex gap-3 mt-3 text-xs flex-wrap">
+                          <span className="text-mint-green">按时 {review.completedOnTime}</span>
+                          <span className="text-teal-400">补练 {review.completedMakeup}</span>
+                          <span className="text-soft-yellow">跳过 {review.skipped}</span>
+                          <span className="text-orange-400">未完成 {review.missed}</span>
+                        </div>
                       </div>
                     );
                   })}
@@ -601,10 +578,73 @@ export default function HistoryPage() {
                 <Sparkles className="w-6 h-6 text-mint-green" />
                 训练建议
               </h3>
-              <p className="text-lg text-text-secondary leading-relaxed">
+              <p className="text-lg text-text-secondary leading-relaxed mb-6">
                 💡 {weeklyReport.advice}
               </p>
+
+              {/* 详细建议 */}
+              {weeklyReport.detailedAdvice && weeklyReport.detailedAdvice.length > 0 && (
+                <div className="pt-6 border-t border-white/10">
+                  <h4 className="text-lg font-semibold text-white mb-4">详细建议</h4>
+                  <div className="space-y-3">
+                    {weeklyReport.detailedAdvice.map((advice, index) => (
+                      <div key={index} className="flex items-start gap-3">
+                        <span className="text-xl flex-shrink-0 mt-0.5">
+                          {index % 2 === 0 ? '✅' : '💡'}
+                        </span>
+                        <p className="text-text-secondary leading-relaxed">{advice}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* 计划复盘 */}
+            {weeklyReport.planReview && weeklyReport.planReview.length > 0 && (
+              <div className="mt-8 tv-card">
+                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                  <Award className="w-6 h-6 text-vibrant-orange" />
+                  计划复盘
+                </h3>
+                <div className="space-y-4">
+                  {weeklyReport.planReview.map((review) => (
+                    <div
+                      key={review.planId}
+                      className="p-4 bg-navy-medium/50 rounded-xl"
+                    >
+                      <div className="flex items-center gap-4 mb-4">
+                        <img
+                          src={review.courseCover}
+                          alt={review.courseTitle}
+                          className="w-16 h-16 rounded-lg object-cover"
+                        />
+                        <div className="flex-1">
+                          <p className="font-medium text-white text-lg">{review.courseTitle}</p>
+                          <p className="text-sm text-text-muted mt-1">
+                            安排 {review.scheduled} 次
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="px-3 py-1 rounded-full bg-mint-green/20 text-mint-green text-sm font-medium">
+                          按时完成 {review.completedOnTime}
+                        </span>
+                        <span className="px-3 py-1 rounded-full bg-teal-400/20 text-teal-400 text-sm font-medium">
+                          补练 {review.completedMakeup}
+                        </span>
+                        <span className="px-3 py-1 rounded-full bg-soft-yellow/20 text-soft-yellow text-sm font-medium">
+                          跳过 {review.skipped}
+                        </span>
+                        <span className="px-3 py-1 rounded-full bg-orange-400/20 text-orange-400 text-sm font-medium">
+                          未完成 {review.missed}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* 连续天数 */}
             {weeklyReport.streakDays > 0 && (

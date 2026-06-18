@@ -591,6 +591,7 @@ const generateRecords = (
   const date = new Date(Date.now() - daysAgo * 86400000);
   const completionRate = Math.floor(Math.random() * 30) + 70;
   const duration = Math.floor(Math.random() * 10) + 15;
+  const isFullCompletion = completionRate >= 90;
   return {
     id: `r_${memberId}_${courseId}_${daysAgo}`,
     memberId,
@@ -603,6 +604,7 @@ const generateRecords = (
     calories: Math.floor(duration * 8),
     totalExercises: 6,
     completedExercises: Math.floor(6 * completionRate / 100),
+    isFullCompletion,
   };
 };
 

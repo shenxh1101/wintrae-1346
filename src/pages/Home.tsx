@@ -46,12 +46,12 @@ export default function Home() {
 
   const { getCurrentMember, childMode, currentMemberId } = useMemberStore();
   const { calculateStreakDays } = useHistoryStore();
-  const { getThisWeekPlans, getWeeklyProgress } = usePlanStore();
+  const { getTodayPlans, getWeeklyProgress } = usePlanStore();
 
   const currentMember = getCurrentMember();
   const recommended = getRecommendedCourses();
   const streakDays = calculateStreakDays(currentMemberId);
-  const weekPlans = getThisWeekPlans(currentMemberId);
+  const todayPlans = getTodayPlans(currentMemberId);
   const weeklyProgress = getWeeklyProgress(currentMemberId);
 
   const filteredCourses = useMemo(() => {
@@ -97,7 +97,7 @@ export default function Home() {
                   <p className="text-3xl font-bold text-mint-green">{childFriendlyFavoritesCount}</p>
                   <p className="text-sm text-text-secondary">收藏课程</p>
                 </div>
-                {weekPlans.length > 0 && (
+                {weeklyProgress.total > 0 && (
                   <>
                     <div className="w-px bg-white/10" />
                     <div className="text-center">
@@ -121,74 +121,132 @@ export default function Home() {
           </div>
         </section>
 
-        {/* 本周训练计划 */}
-        {weekPlans.length > 0 && (
-          <section className="mb-12 animate-slide-up" style={{ animationDelay: '0.05s' }}>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <Target className="w-7 h-7 text-mint-green" />
-                <h2 className="text-2xl font-bold text-white">本周训练计划</h2>
-                <span className="px-3 py-1 bg-mint-green/20 text-mint-green text-sm rounded-full">
-                  {weeklyProgress.percentage}% 完成
-                </span>
-              </div>
-              <button
-                onClick={() => navigate('/family')}
-                className="flex items-center gap-2 text-text-secondary hover:text-white transition-colors"
-              >
-                管理计划
-                <ChevronRight className="w-5 h-5" />
-              </button>
+        {/* 今日训练计划 */}
+        <section className="mb-12 animate-slide-up" style={{ animationDelay: '0.05s' }}>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Target className="w-7 h-7 text-vibrant-orange" />
+              <h2 className="text-2xl font-bold text-white">今日训练计划</h2>
             </div>
+            <button
+              onClick={() => navigate('/family')}
+              className="flex items-center gap-2 text-text-secondary hover:text-white transition-colors"
+            >
+              管理计划
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div>
 
+          {todayPlans.length > 0 ? (
             <div className="grid grid-cols-3 gap-6">
-              {weekPlans.slice(0, 3).map((plan) => {
-                const percentage = Math.round((plan.completedCount / plan.targetCount) * 100);
-                const isCompleted = plan.completedCount >= plan.targetCount;
+              {todayPlans.map((todayPlan) => {
+                const { plan, schedule } = todayPlan;
+                const isCompleted = schedule.status === 'completed-on-time' || schedule.status === 'completed-makeup';
+                const isSkipped = schedule.status === 'skipped';
+                const isPending = schedule.status === 'pending' || schedule.status === 'missed';
+
+                let statusText = '待开始';
+                let statusColor = 'text-vibrant-orange bg-vibrant-orange/20 border-vibrant-orange/30';
+                let cardBorderColor = 'border-vibrant-orange/20 hover:border-vibrant-orange/50';
+
+                if (isCompleted) {
+                  statusText = '已完成';
+                  statusColor = 'text-mint-green bg-mint-green/20 border-mint-green/30';
+                  cardBorderColor = 'border-mint-green/20 hover:border-mint-green/50';
+                } else if (isSkipped) {
+                  statusText = '已跳过';
+                  statusColor = 'text-gray-400 bg-gray-500/20 border-gray-500/30';
+                  cardBorderColor = 'border-gray-500/20 hover:border-gray-500/50';
+                }
+
                 return (
                   <div
-                    key={plan.id}
-                    className="tv-card hover:shadow-glow transition-all cursor-pointer group"
+                    key={schedule.id}
+                    className={cn(
+                      'tv-card hover:shadow-glow transition-all cursor-pointer group border rounded-3xl overflow-hidden',
+                      cardBorderColor
+                    )}
                     onClick={() => navigate(`/course/${plan.courseId}`)}
                   >
-                    <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-lg font-bold text-white group-hover:text-vibrant-orange transition-colors">
+                    <div className="relative h-40 overflow-hidden">
+                      <img
+                        src={plan.courseCover}
+                        alt={plan.courseTitle}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-deep-navy/80 via-deep-navy/20 to-transparent" />
+                      <span className={cn(
+                        'absolute top-4 right-4 px-3 py-1 text-sm font-medium rounded-full border',
+                        statusColor
+                      )}>
+                        {statusText}
+                      </span>
+                    </div>
+                    <div className="p-5">
+                      <h3 className="text-lg font-bold text-white group-hover:text-vibrant-orange transition-colors mb-3">
                         {plan.courseTitle}
                       </h3>
-                      <span className={cn(
-                        'text-lg font-bold',
-                        isCompleted ? 'text-mint-green' : 'text-vibrant-orange'
-                      )}>
-                        {plan.completedCount}/{plan.targetCount}
-                      </span>
-                    </div>
-
-                    <div className="h-2 bg-navy-medium rounded-full overflow-hidden mb-3">
-                      <div
-                        className={cn(
-                          'h-full rounded-full transition-all duration-500',
-                          isCompleted
-                            ? 'bg-gradient-to-r from-mint-green to-teal-400'
-                            : 'bg-gradient-to-r from-vibrant-orange to-orange-hover'
-                        )}
-                        style={{ width: `${Math.min(percentage, 100)}%` }}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-text-muted">
-                        {isCompleted ? '🎉 已完成目标' : '继续加油！'}
-                      </span>
-                      {plan.reminderTime && (
-                        <span className="text-text-muted flex items-center gap-1">
+                      {schedule.reminderTime && (
+                        <div className="flex items-center gap-2 text-text-muted">
                           <Clock className="w-4 h-4" />
-                          {plan.reminderTime}
-                        </span>
+                          <span className="text-sm">{schedule.reminderTime} 提醒</span>
+                        </div>
                       )}
                     </div>
                   </div>
                 );
               })}
+            </div>
+          ) : (
+            <div className="tv-card rounded-3xl p-12 text-center">
+              <div className="text-6xl mb-4">🎯</div>
+              <p className="text-xl text-text-secondary mb-2">今日没有训练安排</p>
+              <p className="text-text-muted">选一个课程开始吧！</p>
+            </div>
+          )}
+        </section>
+
+        {/* 本周训练计划总览 */}
+        {weeklyProgress.total > 0 && (
+          <section className="mb-12 animate-slide-up" style={{ animationDelay: '0.08s' }}>
+            <div className="tv-card rounded-3xl p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-7 h-7 text-mint-green" />
+                  <h2 className="text-2xl font-bold text-white">本周训练计划</h2>
+                </div>
+                <span className="px-4 py-2 bg-mint-green/20 text-mint-green text-lg font-bold rounded-full">
+                  {weeklyProgress.percentage}% 完成
+                </span>
+              </div>
+
+              <div className="mb-6">
+                <div className="h-3 bg-navy-medium rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-mint-green to-teal-400"
+                    style={{ width: `${weeklyProgress.percentage}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 gap-6">
+                <div className="text-center p-4 bg-navy-light rounded-2xl">
+                  <p className="text-3xl font-bold text-white mb-1">{weeklyProgress.completed}</p>
+                  <p className="text-sm text-text-secondary">已完成</p>
+                </div>
+                <div className="text-center p-4 bg-navy-light rounded-2xl">
+                  <p className="text-3xl font-bold text-vibrant-orange mb-1">{weeklyProgress.total}</p>
+                  <p className="text-sm text-text-secondary">总次数</p>
+                </div>
+                <div className="text-center p-4 bg-navy-light rounded-2xl">
+                  <p className="text-3xl font-bold text-gray-400 mb-1">{weeklyProgress.skipped}</p>
+                  <p className="text-sm text-text-secondary">跳过</p>
+                </div>
+                <div className="text-center p-4 bg-navy-light rounded-2xl">
+                  <p className="text-3xl font-bold text-soft-yellow mb-1">{weeklyProgress.missed}</p>
+                  <p className="text-sm text-text-secondary">未完成</p>
+                </div>
+              </div>
             </div>
           </section>
         )}

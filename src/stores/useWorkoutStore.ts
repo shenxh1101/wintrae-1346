@@ -37,6 +37,7 @@ interface WorkoutState {
   getTotalDuration: () => number;
   getCompletedDuration: () => number;
   getNextExercise: () => Exercise | null;
+  getIsFullCompletion: () => boolean;
 }
 
 export const useWorkoutStore = create<WorkoutState>((set, get) => ({
@@ -159,6 +160,8 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
       ? totalCompletedExercises
       : (currentTime > 0 ? 1 : 0);
 
+    const isFullCompletion = get().isCompleted && actualCompletedExercises >= exercises.length;
+
     const record: WorkoutRecord = {
       id: `r_${Date.now()}`,
       memberId: '',
@@ -172,6 +175,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
       totalExercises: exercises.length,
       completedExercises: actualCompletedExercises,
       workoutMode,
+      isFullCompletion,
     };
 
     return record;
@@ -209,5 +213,10 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
   getNextExercise: () => {
     const { exercises, currentExerciseIndex } = get();
     return exercises[currentExerciseIndex + 1] || null;
+  },
+
+  getIsFullCompletion: () => {
+    const { isCompleted, exercises, totalCompletedExercises } = get();
+    return isCompleted && totalCompletedExercises >= exercises.length;
   },
 }));

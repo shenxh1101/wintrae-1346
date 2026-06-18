@@ -10,6 +10,10 @@ export type WorkoutMode = 'normal' | 'skip-warmup' | 'main-only';
 
 export type ReportRange = 'week' | 'last-week' | 'month';
 
+export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+export type PlanStatus = 'pending' | 'completed-on-time' | 'completed-makeup' | 'skipped' | 'missed';
+
 export interface Exercise {
   id: string;
   name: string;
@@ -63,6 +67,7 @@ export interface WorkoutRecord {
   totalExercises: number;
   completedExercises: number;
   workoutMode?: WorkoutMode;
+  isFullCompletion: boolean;
 }
 
 export interface WorkoutState {
@@ -81,6 +86,37 @@ export interface WeeklyStat {
   workoutCount: number;
 }
 
+export interface PlanScheduleItem {
+  id: string;
+  date: string;
+  dayOfWeek: DayOfWeek;
+  status: PlanStatus;
+  completedDate?: string;
+  reminderTime?: string;
+}
+
+export interface PlanItem {
+  id: string;
+  memberId: string;
+  courseId: string;
+  courseTitle: string;
+  courseCover: string;
+  weekStart: string;
+  schedule: PlanScheduleItem[];
+}
+
+export interface PlanReviewItem {
+  planId: string;
+  courseId: string;
+  courseTitle: string;
+  courseCover: string;
+  scheduled: number;
+  completedOnTime: number;
+  completedMakeup: number;
+  skipped: number;
+  missed: number;
+}
+
 export interface WeeklyReport {
   memberId: string;
   memberName: string;
@@ -94,23 +130,13 @@ export interface WeeklyReport {
   dailyStats: WeeklyStat[];
   streakDays: number;
   advice: string;
+  detailedAdvice: string[];
   improvement: {
     durationChange: number;
     completionRateChange: number;
     workoutCountChange: number;
   };
-}
-
-export interface PlanItem {
-  id: string;
-  memberId: string;
-  courseId: string;
-  courseTitle: string;
-  courseCover: string;
-  targetCount: number;
-  completedCount: number;
-  reminderTime?: string;
-  weekStart: string;
+  planReview: PlanReviewItem[];
 }
 
 export interface FamilyPlan {
