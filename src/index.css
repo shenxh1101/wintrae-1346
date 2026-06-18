@@ -1,0 +1,100 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  
+  html {
+    font-size: 18px;
+  }
+  
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: #0A1628;
+    color: #FFFFFF;
+    font-family: 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+  
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+  
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+@layer components {
+  .focusable {
+    @apply transition-all duration-200 outline-none;
+  }
+  
+  .focusable:focus {
+    @apply shadow-focus scale-105;
+  }
+  
+  .focusable:focus-visible {
+    @apply shadow-focus scale-105;
+  }
+  
+  .tv-card {
+    @apply bg-navy-light rounded-2xl p-6 shadow-card transition-all duration-300;
+  }
+  
+  .tv-btn {
+    @apply px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-200 focus:shadow-focus focus:scale-105 outline-none;
+  }
+  
+  .tv-btn-primary {
+    @apply tv-btn bg-vibrant-orange text-white hover:bg-orange-hover;
+  }
+  
+  .tv-btn-secondary {
+    @apply tv-btn bg-navy-medium text-white hover:bg-navy-light border border-text-muted/30;
+  }
+  
+  .tv-btn-icon {
+    @apply w-16 h-16 rounded-full flex items-center justify-center transition-all duration-200 focus:shadow-focus focus:scale-110 outline-none;
+  }
+}
+
+@layer utilities {
+  .text-gradient-orange {
+    background: linear-gradient(135deg, #FF6B35, #FF8555);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .bg-gradient-dark {
+    background: linear-gradient(180deg, #0A1628 0%, #122442 100%);
+  }
+  
+  .bg-glass {
+    background: rgba(18, 36, 66, 0.8);
+    backdrop-filter: blur(10px);
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
