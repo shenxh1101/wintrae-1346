@@ -11,10 +11,12 @@ const exerciseImages = [
 
 function calcTotalMinutes(exercises: Exercise[]): number {
   const totalSeconds = exercises.reduce((sum, ex) => sum + ex.duration, 0);
-  return Math.round(totalSeconds / 60);
+  return Math.max(1, Math.round(totalSeconds / 60));
 }
 
-function calcCalories(durationMinutes: number, intensity: 'low' | 'medium' | 'high'): number {
+function calcCalories(exercises: Exercise[], intensity: 'low' | 'medium' | 'high'): number {
+  const totalSeconds = exercises.reduce((sum, ex) => sum + ex.duration, 0);
+  const durationMinutes = Math.max(1, Math.round(totalSeconds / 60));
   const perMinute = { low: 3, medium: 6, high: 10 };
   return Math.round(durationMinutes * perMinute[intensity]);
 }
@@ -373,7 +375,7 @@ export const mockCourses: Course[] = [
     category: 'stretch',
     difficulty: 'easy',
     duration: calcTotalMinutes(stretchExercises),
-    calories: calcCalories(calcTotalMinutes(stretchExercises), 'low'),
+    calories: calcCalories(stretchExercises, 'low'),
     cover: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&h=500&fit=crop',
     description: '温和的全身拉伸运动，唤醒沉睡的身体，为新的一天注入活力。适合所有年龄段的练习者。',
     tips: [
@@ -394,7 +396,7 @@ export const mockCourses: Course[] = [
     category: 'fatburn',
     difficulty: 'hard',
     duration: calcTotalMinutes(fatburnExercises),
-    calories: calcCalories(calcTotalMinutes(fatburnExercises), 'high'),
+    calories: calcCalories(fatburnExercises, 'high'),
     cover: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&h=500&fit=crop',
     description: '高强度间歇训练，快速提升心率，高效燃烧脂肪。适合有一定运动基础的人士。',
     tips: [
@@ -414,7 +416,7 @@ export const mockCourses: Course[] = [
     category: 'strength',
     difficulty: 'medium',
     duration: calcTotalMinutes(strengthExercises),
-    calories: calcCalories(calcTotalMinutes(strengthExercises), 'medium'),
+    calories: calcCalories(strengthExercises, 'medium'),
     cover: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800&h=500&fit=crop',
     description: '通过自重训练锻炼全身主要肌群，提升基础力量，塑造完美体型。',
     tips: [
@@ -434,7 +436,7 @@ export const mockCourses: Course[] = [
     category: 'neck',
     difficulty: 'easy',
     duration: calcTotalMinutes(neckExercises),
-    calories: calcCalories(calcTotalMinutes(neckExercises), 'low'),
+    calories: calcCalories(neckExercises, 'low'),
     cover: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&h=500&fit=crop',
     description: '专门针对肩颈僵硬问题设计，缓解办公疲劳，预防颈椎病。',
     tips: [
@@ -532,6 +534,14 @@ export const mockCourses: Course[] = [
     restBetweenExercises: 0,
   },
 ];
+
+mockCourses.forEach((course) => {
+  const totalSec = course.exercises.reduce((s, e) => s + e.duration, 0);
+  course.duration = Math.max(1, Math.round(totalSec / 60));
+  const intensity: 'low' | 'medium' | 'high' =
+    course.difficulty === 'easy' ? 'low' : course.difficulty === 'hard' ? 'high' : 'medium';
+  course.calories = calcCalories(course.exercises, intensity);
+});
 
 export const mockMembers: FamilyMember[] = [
   {

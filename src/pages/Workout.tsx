@@ -102,12 +102,12 @@ export default function Workout() {
   }, [prevExercise, isCompleted]);
 
   const handleExit = useCallback(() => {
-    if (!isCompleted && totalCompletedExercises > 0) {
+    if (!isCompleted && (totalCompletedExercises > 0 || currentTime > 0)) {
       saveRecord();
     }
     resetWorkout();
     navigate(`/course/${id}`);
-  }, [isCompleted, totalCompletedExercises, saveRecord, resetWorkout, navigate, id]);
+  }, [isCompleted, totalCompletedExercises, currentTime, saveRecord, resetWorkout, navigate, id]);
 
   const handleFinish = useCallback(() => {
     saveRecord();

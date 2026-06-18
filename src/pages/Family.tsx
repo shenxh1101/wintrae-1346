@@ -99,7 +99,7 @@ export default function Family() {
   } = useMemberStore();
   const { courses } = useCourseStore();
   const { calculateStreakDays } = useHistoryStore();
-  const { getThisWeekPlans, addPlan, removePlan, getWeeklyProgress, getWeeklySchedule } = usePlanStore();
+  const { getThisWeekPlans, addPlan, removePlan, getWeeklyProgress, getWeeklySchedule, markSkipped, markMakeup } = usePlanStore();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showAddPlanModal, setShowAddPlanModal] = useState(false);
@@ -494,6 +494,7 @@ export default function Family() {
                             {day.items.length > 0 ? (
                               day.items.map(({ plan, schedule }) => {
                                 const style = getStatusStyle(schedule.status);
+                                const showActionButtons = schedule.status === 'pending' || schedule.status === 'missed';
                                 return (
                                   <div
                                     key={schedule.id}
@@ -507,12 +508,14 @@ export default function Family() {
                                       <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent opacity-50" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.1) 4px, rgba(255,255,255,0.1) 8px)' }} />
                                     )}
                                     <div className="relative">
-                                      <img
-                                        src={plan.courseCover}
-                                        alt={plan.courseTitle}
-                                        className="w-full h-10 rounded object-cover mb-1.5"
-                                      />
-                                      <p className="text-white text-xs font-medium truncate">{plan.courseTitle}</p>
+                                      <div onClick={() => (window.location.href = `/course/${plan.courseId}`)} className="cursor-pointer">
+                                        <img
+                                          src={plan.courseCover}
+                                          alt={plan.courseTitle}
+                                          className="w-full h-10 rounded object-cover mb-1.5"
+                                        />
+                                        <p className="text-white text-xs font-medium truncate">{plan.courseTitle}</p>
+                                      </div>
                                       <p className={cn(
                                         'text-[10px] mt-0.5',
                                         schedule.status === 'completed-on-time' ? 'text-mint-green' :
@@ -523,6 +526,30 @@ export default function Family() {
                                       )}>
                                         {getStatusLabel(schedule.status)}
                                       </p>
+                                      {showActionButtons && (
+                                        <div className="flex gap-1 mt-1.5">
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              markSkipped(schedule.id);
+                                            }}
+                                            className="text-[10px] text-soft-yellow hover:text-soft-yellow/80 transition-colors"
+                                          >
+                                            跳过
+                                          </button>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              if (window.confirm('确认今天补练这节课吗？')) {
+                                                markMakeup(schedule.id, new Date().toISOString().split('T')[0]);
+                                              }
+                                            }}
+                                            className="text-[10px] text-mint-green hover:text-mint-green/80 transition-colors"
+                                          >
+                                            补练
+                                          </button>
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 );

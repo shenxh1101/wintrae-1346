@@ -22,11 +22,13 @@ interface WorkoutState {
   isPaused: boolean;
   isCompleted: boolean;
   totalCompletedExercises: number;
+  skippedExercises: number;
+  completedSeconds: number;
   savedRecord: WorkoutRecord | null;
   startWorkout: (course: Course, mode?: WorkoutMode) => void;
   pauseWorkout: () => void;
   resumeWorkout: () => void;
-  nextExercise: () => void;
+  nextExercise: (skipped?: boolean) => void;
   prevExercise: () => void;
   skipExercise: () => void;
   tick: () => void;
@@ -50,6 +52,8 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
   isPaused: false,
   isCompleted: false,
   totalCompletedExercises: 0,
+  skippedExercises: 0,
+  completedSeconds: 0,
   savedRecord: null,
 
   startWorkout: (course, mode = 'normal') => {
@@ -64,6 +68,8 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
       isPaused: false,
       isCompleted: false,
       totalCompletedExercises: 0,
+      skippedExercises: 0,
+      completedSeconds: 0,
       savedRecord: null,
     });
   },
@@ -72,20 +78,39 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
 
   resumeWorkout: () => set({ isPlaying: true, isPaused: false }),
 
-  nextExercise: () => {
-    const { currentExerciseIndex, exercises, totalCompletedExercises } = get();
+  nextExercise: (skipped = false) => {
+    const { currentExerciseIndex, exercises, totalCompletedExercises, skippedExercises, completedSeconds } = get();
+    const currentExercise = exercises[currentExerciseIndex];
     if (currentExerciseIndex < exercises.length - 1) {
-      set({
-        currentExerciseIndex: currentExerciseIndex + 1,
-        currentTime: 0,
-        totalCompletedExercises: totalCompletedExercises + 1,
-      });
+      if (skipped) {
+        set({
+          currentExerciseIndex: currentExerciseIndex + 1,
+          currentTime: 0,
+          skippedExercises: skippedExercises + 1,
+        });
+      } else {
+        set({
+          currentExerciseIndex: currentExerciseIndex + 1,
+          currentTime: 0,
+          totalCompletedExercises: totalCompletedExercises + 1,
+          completedSeconds: completedSeconds + (currentExercise?.duration || 0),
+        });
+      }
     } else {
-      set({
-        isPlaying: false,
-        isCompleted: true,
-        totalCompletedExercises: totalCompletedExercises + 1,
-      });
+      if (skipped) {
+        set({
+          isPlaying: false,
+          isCompleted: true,
+          skippedExercises: skippedExercises + 1,
+        });
+      } else {
+        set({
+          isPlaying: false,
+          isCompleted: true,
+          totalCompletedExercises: totalCompletedExercises + 1,
+          completedSeconds: completedSeconds + (currentExercise?.duration || 0),
+        });
+      }
     }
   },
 
@@ -101,21 +126,23 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
   },
 
   skipExercise: () => {
-    get().nextExercise();
+    get().nextExercise(true);
   },
 
   tick: () => {
-    const { isPlaying, currentTime, exercises, currentExerciseIndex } = get();
+    const { isPlaying, currentTime, exercises, currentExerciseIndex, completedSeconds } = get();
     if (!isPlaying) return;
 
     const currentExercise = exercises[currentExerciseIndex];
     if (!currentExercise) return;
 
     const newTime = currentTime + 1;
+    const newCompletedSeconds = completedSeconds + 1;
     if (newTime >= currentExercise.duration) {
+      set({ completedSeconds: newCompletedSeconds });
       get().nextExercise();
     } else {
-      set({ currentTime: newTime });
+      set({ currentTime: newTime, completedSeconds: newCompletedSeconds });
     }
   },
 
@@ -130,23 +157,17 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
       isPaused: false,
       isCompleted: false,
       totalCompletedExercises: 0,
+      skippedExercises: 0,
+      completedSeconds: 0,
       savedRecord: null,
     });
   },
 
   completeWorkout: () => {
-    const { course, exercises, totalCompletedExercises, currentExerciseIndex, currentTime, workoutMode } = get();
+    const { course, exercises, totalCompletedExercises, completedSeconds, currentTime, workoutMode } = get();
     if (!course) return null;
 
-    const completedExerciseDuration = exercises
-      .slice(0, totalCompletedExercises)
-      .reduce((sum, ex) => sum + ex.duration, 0);
-
-    const currentProgress = currentTime > 0 && currentExerciseIndex < exercises.length
-      ? Math.min(currentTime, exercises[currentExerciseIndex].duration)
-      : 0;
-
-    const totalCompletedSeconds = completedExerciseDuration + currentProgress;
+    const totalCompletedSeconds = completedSeconds + currentTime;
     const totalDuration = exercises.reduce((sum, ex) => sum + ex.duration, 0);
 
     const completionRate = Math.min(100, totalDuration > 0
@@ -156,9 +177,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
     const fullCourseDuration = course.exercises.reduce((sum, ex) => sum + ex.duration, 0);
     const calories = Math.round((totalCompletedSeconds / fullCourseDuration) * course.calories);
 
-    const actualCompletedExercises = totalCompletedExercises > 0
-      ? totalCompletedExercises
-      : (currentTime > 0 ? 1 : 0);
+    const actualCompletedExercises = totalCompletedExercises;
 
     const isFullCompletion = get().isCompleted && actualCompletedExercises >= exercises.length;
 
