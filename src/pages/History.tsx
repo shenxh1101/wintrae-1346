@@ -1,21 +1,28 @@
-import { useState } from 'react';
-import { History, Flame, Clock, CheckCircle, TrendingUp, Calendar, ChevronRight, Target, Award, Sparkles, ArrowUp, ArrowDown } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { History, Flame, Clock, CheckCircle, TrendingUp, Calendar, ChevronRight, Target, Award, Sparkles, ArrowUp, ArrowDown, BarChart3 } from 'lucide-react';
 import { useHistoryStore } from '@/stores/useHistoryStore';
 import { useMemberStore } from '@/stores/useMemberStore';
+import { usePlanStore } from '@/stores/usePlanStore';
 import { cn, formatDate, formatMinutes, getCategoryName } from '@/lib/utils';
+import { ReportRange } from '@/types';
 
 export default function HistoryPage() {
-  const { getMemberRecords, getMemberStats, getWeeklyStats, getWeeklyReport } = useHistoryStore();
-  const { getCurrentMember, members, switchMember, currentMemberId } = useMemberStore();
+  const { getMemberRecords, getMemberStats, getWeeklyStats, getWeeklyReport, calculateStreakDays } = useHistoryStore();
+  const { getCurrentMember, members, switchMember, currentMemberId, childMode } = useMemberStore();
+  const { getWeeklyProgress, getThisWeekPlans } = usePlanStore();
   const [activeTab, setActiveTab] = useState<'overview' | 'weekly' | 'records'>('overview');
+  const [reportRange, setReportRange] = useState<ReportRange>('week');
 
   const currentMember = getCurrentMember();
-  const records = getMemberRecords(currentMemberId);
+  const records = getMemberRecords(currentMemberId, childMode);
   const stats = getMemberStats(currentMemberId);
-  const weeklyStats = getWeeklyStats(currentMemberId);
+  const weeklyStats = getWeeklyStats(currentMemberId, reportRange);
   const weeklyReport = currentMember
-    ? getWeeklyReport(currentMemberId, currentMember.name)
+    ? getWeeklyReport(currentMemberId, currentMember.name, reportRange)
     : null;
+  const streakDays = calculateStreakDays(currentMemberId);
+  const weeklyProgress = getWeeklyProgress(currentMemberId);
+  const weekPlans = getThisWeekPlans(currentMemberId);
 
   const maxDuration = Math.max(...weeklyStats.map((s) => s.duration), 1);
 
@@ -71,6 +78,12 @@ export default function HistoryPage() {
     { id: 'overview', label: '总览' },
     { id: 'weekly', label: '家庭周报' },
     { id: 'records', label: '全部记录' },
+  ];
+
+  const rangeOptions = [
+    { id: 'week', label: '本周' },
+    { id: 'last-week', label: '上周' },
+    { id: 'month', label: '近30天' },
   ];
 
   return (
@@ -137,7 +150,7 @@ export default function HistoryPage() {
                 <div>
                   <p className="text-text-secondary mb-1">连续训练</p>
                   <h2 className="text-5xl font-bold text-white">
-                    {stats.streakDays} <span className="text-2xl text-text-secondary">天</span>
+                    {streakDays} <span className="text-2xl text-text-secondary">天</span>
                   </h2>
                   <p className="text-mint-green mt-2 flex items-center gap-2">
                     <CheckCircle className="w-5 h-5" />
@@ -178,6 +191,73 @@ export default function HistoryPage() {
                 );
               })}
             </div>
+
+            {/* 本周计划进度 */}
+            {weekPlans.length > 0 && (
+              <div className="tv-card mb-10">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-white flex items-center gap-3">
+                    <Target className="w-6 h-6 text-mint-green" />
+                    本周训练计划
+                  </h3>
+                  <span className="text-mint-green font-medium">
+                    {weeklyProgress.completed} / {weeklyProgress.total} 已完成
+                  </span>
+                </div>
+
+                <div className="mb-6">
+                  <div className="flex items-center justify-between text-sm mb-2">
+                    <span className="text-text-secondary">完成进度</span>
+                    <span className="text-white font-medium">{weeklyProgress.percentage}%</span>
+                  </div>
+                  <div className="h-3 bg-navy-medium rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-mint-green to-teal-400 rounded-full transition-all duration-500"
+                      style={{ width: `${weeklyProgress.percentage}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {weekPlans.map((plan) => (
+                    <div
+                      key={plan.id}
+                      className="flex items-center justify-between p-4 bg-navy-medium/50 rounded-xl"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          'w-10 h-10 rounded-full flex items-center justify-center',
+                          plan.completedCount >= plan.targetCount
+                            ? 'bg-mint-green/20 text-mint-green'
+                            : 'bg-navy-medium text-text-secondary'
+                        )}>
+                          {plan.completedCount >= plan.targetCount ? (
+                            <CheckCircle className="w-5 h-5" />
+                          ) : (
+                            <BarChart3 className="w-5 h-5" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-white">{plan.courseTitle}</p>
+                          <p className="text-sm text-text-muted">
+                            {plan.reminderTime && `提醒：${plan.reminderTime}`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className={cn(
+                          'text-lg font-bold',
+                          plan.completedCount >= plan.targetCount ? 'text-mint-green' : 'text-white'
+                        )}>
+                          {plan.completedCount}/{plan.targetCount}
+                        </p>
+                        <p className="text-xs text-text-muted">次</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-3 gap-8">
               {/* 周报图表 */}
@@ -263,6 +343,24 @@ export default function HistoryPage() {
         {/* 家庭周报 Tab */}
         {activeTab === 'weekly' && weeklyReport && (
           <div className="animate-fade-in">
+            {/* 时间范围切换 */}
+            <div className="flex gap-2 mb-8">
+              {rangeOptions.map((range) => (
+                <button
+                  key={range.id}
+                  onClick={() => setReportRange(range.id as ReportRange)}
+                  className={cn(
+                    'px-5 py-2 rounded-xl font-medium transition-all',
+                    reportRange === range.id
+                      ? 'bg-mint-green text-white'
+                      : 'bg-navy-medium text-text-secondary hover:text-white hover:bg-navy-light'
+                  )}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+
             {/* 周报头部 */}
             <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-vibrant-orange/20 via-mint-green/10 to-purple-500/10 p-8 mb-8">
               <div className="flex items-center justify-between">
@@ -272,10 +370,13 @@ export default function HistoryPage() {
                     <span className="text-vibrant-orange font-medium">家庭周报</span>
                   </div>
                   <h2 className="text-4xl font-bold text-white mb-2">
-                    {weeklyReport.memberName}的本周报告
+                    {weeklyReport.memberName}的报告
                   </h2>
                   <p className="text-text-secondary">
-                    本周你一共训练了 {weeklyReport.totalWorkouts} 次，继续加油！
+                    {reportRange === 'week' && '本周'}
+                    {reportRange === 'last-week' && '上周'}
+                    {reportRange === 'month' && '近30天'}
+                    一共训练了 {weeklyReport.totalWorkouts} 次，继续加油！
                   </p>
                 </div>
                 <div className="text-8xl opacity-20">
@@ -289,7 +390,19 @@ export default function HistoryPage() {
                 <Target className="w-8 h-8 text-vibrant-orange mx-auto mb-2" />
                 <p className="text-3xl font-bold text-white">{weeklyReport.totalWorkouts}</p>
                 <p className="text-sm text-text-secondary">训练频次</p>
-                <p className="text-xs text-text-muted mt-1">本周</p>
+                {weeklyReport.improvement.workoutCountChange !== 0 && (
+                  <p className={cn(
+                    'text-xs mt-1 flex items-center justify-center gap-1',
+                    weeklyReport.improvement.workoutCountChange > 0 ? 'text-mint-green' : 'text-orange-400'
+                  )}>
+                    {weeklyReport.improvement.workoutCountChange > 0 ? (
+                      <ArrowUp className="w-3 h-3" />
+                    ) : (
+                      <ArrowDown className="w-3 h-3" />
+                    )}
+                    {Math.abs(weeklyReport.improvement.workoutCountChange)}% 较上个周期
+                  </p>
+                )}
               </div>
               <div className="tv-card text-center">
                 <Clock className="w-8 h-8 text-mint-green mx-auto mb-2" />
@@ -307,7 +420,7 @@ export default function HistoryPage() {
                     ) : (
                       <ArrowDown className="w-3 h-3" />
                     )}
-                    {Math.abs(weeklyReport.improvement.durationChange)}% 较上周
+                    {Math.abs(weeklyReport.improvement.durationChange)}% 较上个周期
                   </p>
                 )}
               </div>
@@ -331,11 +444,56 @@ export default function HistoryPage() {
                     ) : (
                       <ArrowDown className="w-3 h-3" />
                     )}
-                    {Math.abs(weeklyReport.improvement.completionRateChange)}% 较上周
+                    {Math.abs(weeklyReport.improvement.completionRateChange)}% 较上个周期
                   </p>
                 )}
               </div>
             </div>
+
+            {/* 本周计划完成情况 */}
+            {reportRange === 'week' && weekPlans.length > 0 && (
+              <div className="tv-card mb-8">
+                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                  <Award className="w-6 h-6 text-soft-yellow" />
+                  计划完成情况
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {weekPlans.map((plan) => {
+                    const percentage = Math.round((plan.completedCount / plan.targetCount) * 100);
+                    const isCompleted = plan.completedCount >= plan.targetCount;
+                    return (
+                      <div key={plan.id} className="p-4 bg-navy-medium/50 rounded-xl">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="font-medium text-white">{plan.courseTitle}</span>
+                          <span className={cn(
+                            'text-sm font-bold',
+                            isCompleted ? 'text-mint-green' : 'text-vibrant-orange'
+                          )}>
+                            {plan.completedCount}/{plan.targetCount} 次
+                          </span>
+                        </div>
+                        <div className="h-2 bg-navy-medium rounded-full overflow-hidden">
+                          <div
+                            className={cn(
+                              'h-full rounded-full transition-all duration-500',
+                              isCompleted
+                                ? 'bg-gradient-to-r from-mint-green to-teal-400'
+                                : 'bg-gradient-to-r from-vibrant-orange to-orange-hover'
+                            )}
+                            style={{ width: `${Math.min(percentage, 100)}%` }}
+                          />
+                        </div>
+                        {plan.reminderTime && (
+                          <p className="text-xs text-text-muted mt-2">
+                            每日提醒：{plan.reminderTime}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-3 gap-8">
               {/* 每日训练详情 */}
@@ -348,7 +506,7 @@ export default function HistoryPage() {
                   {weeklyReport.dailyStats.map((stat, index) => {
                     const maxDur = Math.max(...weeklyReport.dailyStats.map(s => s.duration), 1);
                     const height = stat.duration > 0 ? (stat.duration / maxDur) * 100 : 0;
-                    const isToday = index === weeklyReport.dailyStats.length - 1;
+                    const isToday = index === weeklyReport.dailyStats.length - 1 && reportRange === 'week';
                     return (
                       <div key={stat.date} className="flex-1 flex flex-col items-center">
                         <div className="text-sm text-text-secondary mb-2 h-6">
@@ -422,7 +580,7 @@ export default function HistoryPage() {
                   </div>
                 ) : (
                   <div className="text-center py-8">
-                    <p className="text-text-secondary">本周暂无训练</p>
+                    <p className="text-text-secondary">本周期暂无训练</p>
                   </div>
                 )}
 
@@ -516,7 +674,7 @@ export default function HistoryPage() {
                             <div className="h-2 bg-navy-medium rounded-full overflow-hidden">
                               <div
                                 className="h-full bg-gradient-to-r from-mint-green to-teal-400 rounded-full transition-all duration-500"
-                                style={{ width: `${record.completionRate}%` }}
+                                style={{ width: `${Math.min(record.completionRate, 100)}%` }}
                               />
                             </div>
                           </div>

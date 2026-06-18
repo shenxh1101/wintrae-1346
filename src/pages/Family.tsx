@@ -1,9 +1,24 @@
 import { useState } from 'react';
-import { Users, Plus, Star, Bell, Target, Check, ChevronRight, X } from 'lucide-react';
+import {
+  Users,
+  Plus,
+  Star,
+  Bell,
+  Target,
+  Check,
+  ChevronRight,
+  X,
+  Clock,
+  Trash2,
+  Calendar,
+} from 'lucide-react';
 import { useMemberStore } from '@/stores/useMemberStore';
 import { useCourseStore } from '@/stores/useCourseStore';
+import { useHistoryStore } from '@/stores/useHistoryStore';
+import { usePlanStore } from '@/stores/usePlanStore';
 import { cn, formatDate } from '@/lib/utils';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
+import { Course } from '@/types';
 
 const avatarOptions = ['👨', '👩', '👦', '👧', '👴', '👵', '🧑', '👱'];
 
@@ -26,6 +41,9 @@ const restReminderOptions = [
   { value: 90, label: '90分钟' },
 ];
 
+const targetCountOptions = [1, 2, 3, 4, 5, 6, 7];
+const reminderTimeOptions = ['07:00', '08:00', '09:00', '12:00', '18:00', '19:00', '20:00', '21:00'];
+
 export default function Family() {
   const {
     members,
@@ -37,21 +55,33 @@ export default function Family() {
     addMember,
   } = useMemberStore();
   const { courses } = useCourseStore();
+  const { calculateStreakDays } = useHistoryStore();
+  const { getThisWeekPlans, addPlan, removePlan, getWeeklyProgress } = usePlanStore();
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddPlanModal, setShowAddPlanModal] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'info' | 'favorites' | 'settings'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'favorites' | 'plans' | 'settings'>('info');
 
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberAvatar, setNewMemberAvatar] = useState(avatarOptions[0]);
   const [newMemberIsChild, setNewMemberIsChild] = useState(false);
 
+  const [newPlanCourseId, setNewPlanCourseId] = useState('');
+  const [newPlanTargetCount, setNewPlanTargetCount] = useState(3);
+  const [newPlanReminderTime, setNewPlanReminderTime] = useState('');
+
   const selectedMember = members.find((m) => m.id === selectedMemberId);
+  const memberPlans = selectedMember ? getThisWeekPlans(selectedMember.id) : [];
+  const memberWeeklyProgress = selectedMember ? getWeeklyProgress(selectedMember.id) : { total: 0, completed: 0, percentage: 0 };
+  const memberStreakDays = selectedMember ? calculateStreakDays(selectedMember.id) : 0;
 
   useKeyboardNavigation({
     onBack: () => {
       if (showAddModal) {
         setShowAddModal(false);
+      } else if (showAddPlanModal) {
+        setShowAddPlanModal(false);
       } else if (selectedMemberId) {
         setSelectedMemberId(null);
       }
@@ -82,9 +112,38 @@ export default function Family() {
     setShowAddModal(false);
   };
 
+  const handleAddPlan = () => {
+    if (!selectedMemberId || !newPlanCourseId) return;
+
+    const course = courses.find((c) => c.id === newPlanCourseId);
+    if (!course) return;
+
+    addPlan({
+      memberId: selectedMemberId,
+      courseId: newPlanCourseId,
+      courseTitle: course.title,
+      courseCover: course.cover,
+      targetCount: newPlanTargetCount,
+      reminderTime: newPlanReminderTime || undefined,
+    });
+
+    setNewPlanCourseId('');
+    setNewPlanTargetCount(3);
+    setNewPlanReminderTime('');
+    setShowAddPlanModal(false);
+  };
+
   const getFavoriteCourses = (favorites: string[]) => {
     let result = courses.filter((c) => favorites.includes(c.id));
     if (childMode) {
+      result = result.filter((c) => c.isForChildren || c.difficulty === 'easy');
+    }
+    return result;
+  };
+
+  const getAddableCourses = (): Course[] => {
+    let result = courses.filter((c) => !memberPlans.some((p) => p.courseId === c.id));
+    if (childMode || selectedMember?.isChild) {
       result = result.filter((c) => c.isForChildren || c.difficulty === 'easy');
     }
     return result;
@@ -120,12 +179,18 @@ export default function Family() {
                 )}
                 <div className="flex justify-center gap-6 py-6 border-y border-white/10">
                   <div className="text-center">
-                    <p className="text-3xl font-bold text-vibrant-orange">{selectedMember.streakDays}</p>
+                    <p className="text-3xl font-bold text-vibrant-orange">{memberStreakDays}</p>
                     <p className="text-sm text-text-secondary">连续天数</p>
                   </div>
                   <div className="text-center">
                     <p className="text-3xl font-bold text-mint-green">{favoriteCourses.length}</p>
                     <p className="text-sm text-text-secondary">收藏课程</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-3xl font-bold text-soft-yellow">
+                      {memberWeeklyProgress.completed}/{memberWeeklyProgress.total}
+                    </p>
+                    <p className="text-sm text-text-secondary">本周计划</p>
                   </div>
                 </div>
                 {selectedMember.lastWorkoutDate && (
@@ -168,10 +233,11 @@ export default function Family() {
             {/* 右侧：详情内容 */}
             <div className="col-span-2">
               {/* 标签切换 */}
-              <div className="flex gap-2 mb-6">
+              <div className="flex gap-2 mb-6 flex-wrap">
                 {[
                   { id: 'info', label: '基本信息', icon: Users },
                   { id: 'favorites', label: '收藏课程', icon: Star },
+                  { id: 'plans', label: '训练计划', icon: Target },
                   { id: 'settings', label: '设置', icon: Bell },
                 ].map((tab) => (
                   <button
@@ -290,6 +356,88 @@ export default function Family() {
                 </div>
               )}
 
+              {/* 训练计划 */}
+              {activeTab === 'plans' && (
+                <div className="animate-fade-in">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-white">
+                      本周训练计划
+                      <span className="text-text-secondary font-normal ml-3">
+                        {memberWeeklyProgress.percentage}% 完成
+                      </span>
+                    </h3>
+                    <button
+                      onClick={() => setShowAddPlanModal(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-vibrant-orange text-white rounded-xl font-medium hover:bg-orange-hover transition-all text-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      添加计划
+                    </button>
+                  </div>
+
+                  {memberPlans.length > 0 ? (
+                    <div className="space-y-4">
+                      {memberPlans.map((plan) => {
+                        const percentage = Math.round((plan.completedCount / plan.targetCount) * 100);
+                        const isCompleted = plan.completedCount >= plan.targetCount;
+                        return (
+                          <div
+                            key={plan.id}
+                            className="tv-card flex items-center gap-4"
+                          >
+                            <img
+                              src={plan.courseCover}
+                              alt={plan.courseTitle}
+                              className="w-20 h-14 rounded-lg object-cover flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between mb-2">
+                                <h4 className="font-medium text-white truncate">{plan.courseTitle}</h4>
+                                <span className={cn(
+                                  'text-base font-bold flex-shrink-0 ml-2',
+                                  isCompleted ? 'text-mint-green' : 'text-vibrant-orange'
+                                )}>
+                                  {plan.completedCount}/{plan.targetCount} 次
+                                </span>
+                              </div>
+                              <div className="h-2 bg-navy-medium rounded-full overflow-hidden mb-2">
+                                <div
+                                  className={cn(
+                                    'h-full rounded-full transition-all duration-500',
+                                    isCompleted
+                                      ? 'bg-gradient-to-r from-mint-green to-teal-400'
+                                      : 'bg-gradient-to-r from-vibrant-orange to-orange-hover'
+                                  )}
+                                  style={{ width: `${Math.min(percentage, 100)}%` }}
+                                />
+                              </div>
+                              {plan.reminderTime && (
+                                <div className="flex items-center gap-1 text-text-muted text-sm">
+                                  <Clock className="w-3.5 h-3.5" />
+                                  提醒：{plan.reminderTime}
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => removePlan(plan.id)}
+                              className="p-2 text-text-muted hover:text-red-400 transition-colors flex-shrink-0"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="tv-card text-center py-12">
+                      <Target className="w-16 h-16 text-text-muted mx-auto mb-4 opacity-30" />
+                      <p className="text-text-secondary">还没有训练计划</p>
+                      <p className="text-text-muted text-sm mt-2">点击上方按钮添加本周训练计划</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* 设置 */}
               {activeTab === 'settings' && (
                 <div className="tv-card animate-fade-in">
@@ -353,6 +501,128 @@ export default function Family() {
             </div>
           </div>
         </div>
+
+        {/* 添加计划弹窗 */}
+        {showAddPlanModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-deep-navy/80 backdrop-blur-sm">
+            <div className="bg-navy-light rounded-3xl p-8 w-full max-w-lg animate-scale-in max-h-[80vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white">添加训练计划</h2>
+                <button
+                  onClick={() => setShowAddPlanModal(false)}
+                  className="w-10 h-10 rounded-full bg-navy-medium flex items-center justify-center text-text-secondary hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* 选择课程 */}
+                <div>
+                  <label className="block text-text-secondary text-sm mb-3">选择课程</label>
+                  <div className="grid grid-cols-2 gap-3 max-h-60 overflow-y-auto pr-2">
+                    {getAddableCourses().map((course) => (
+                      <button
+                        key={course.id}
+                        onClick={() => setNewPlanCourseId(course.id)}
+                        className={cn(
+                          'p-3 rounded-xl text-left transition-all flex gap-3',
+                          newPlanCourseId === course.id
+                            ? 'bg-vibrant-orange/20 border border-vibrant-orange/30'
+                            : 'bg-navy-medium hover:bg-navy-light'
+                        )}
+                      >
+                        <img
+                          src={course.cover}
+                          alt={course.title}
+                          className="w-16 h-12 rounded-lg object-cover flex-shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-white text-sm font-medium truncate">{course.title}</p>
+                          <p className="text-text-muted text-xs mt-0.5">{course.duration} 分钟</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 目标次数 */}
+                <div>
+                  <label className="block text-text-secondary text-sm mb-3">
+                    本周目标次数
+                    <span className="text-vibrant-orange ml-2">{newPlanTargetCount} 次</span>
+                  </label>
+                  <div className="flex gap-2">
+                    {targetCountOptions.map((count) => (
+                      <button
+                        key={count}
+                        onClick={() => setNewPlanTargetCount(count)}
+                        className={cn(
+                          'flex-1 py-3 rounded-xl font-medium transition-all',
+                          newPlanTargetCount === count
+                            ? 'bg-vibrant-orange text-white'
+                            : 'bg-navy-medium text-text-secondary hover:bg-navy-light hover:text-white'
+                        )}
+                      >
+                        {count}次
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 提醒时间 */}
+                <div>
+                  <label className="block text-text-secondary text-sm mb-3">
+                    提醒时间
+                    <span className="text-text-muted ml-2">（可选）</span>
+                  </label>
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => setNewPlanReminderTime('')}
+                      className={cn(
+                        'px-4 py-2 rounded-xl text-sm font-medium transition-all',
+                        !newPlanReminderTime
+                          ? 'bg-mint-green/20 text-mint-green border border-mint-green/30'
+                          : 'bg-navy-medium text-text-secondary hover:bg-navy-light hover:text-white'
+                      )}
+                    >
+                      不提醒
+                    </button>
+                    {reminderTimeOptions.map((time) => (
+                      <button
+                        key={time}
+                        onClick={() => setNewPlanReminderTime(time)}
+                        className={cn(
+                          'px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-1.5',
+                          newPlanReminderTime === time
+                            ? 'bg-mint-green/20 text-mint-green border border-mint-green/30'
+                            : 'bg-navy-medium text-text-secondary hover:bg-navy-light hover:text-white'
+                        )}
+                      >
+                        <Clock className="w-4 h-4" />
+                        {time}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 确认按钮 */}
+                <button
+                  onClick={handleAddPlan}
+                  disabled={!newPlanCourseId}
+                  className={cn(
+                    'w-full py-4 rounded-xl font-bold text-lg transition-all',
+                    newPlanCourseId
+                      ? 'bg-vibrant-orange text-white hover:bg-orange-hover'
+                      : 'bg-navy-medium text-text-muted cursor-not-allowed'
+                  )}
+                >
+                  添加计划
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -386,60 +656,63 @@ export default function Family() {
 
         {/* 成员卡片网格 */}
         <div className="grid grid-cols-4 gap-6">
-          {members.map((member, index) => (
-            <div
-              key={member.id}
-              style={{ animationDelay: `${index * 0.1}s` }}
-              className="animate-scale-in"
-            >
+          {members.map((member, index) => {
+            const streak = calculateStreakDays(member.id);
+            return (
               <div
-                onClick={() => handleSelectMember(member.id)}
-                className={cn(
-                  'focusable tv-card cursor-pointer hover:shadow-glow transition-all',
-                  currentMemberId === member.id && 'ring-2 ring-vibrant-orange shadow-glow'
-                )}
+                key={member.id}
+                style={{ animationDelay: `${index * 0.1}s` }}
+                className="animate-scale-in"
               >
-                <div className="text-center pb-4">
-                  <div
-                    className={cn(
-                      'w-24 h-24 mx-auto rounded-full flex items-center justify-center text-5xl mb-4',
-                      member.isChild ? 'bg-soft-yellow/20' : 'bg-navy-medium'
-                    )}
-                  >
-                    {member.avatar}
-                  </div>
-                  <h3 className="text-xl font-bold text-white mb-1">{member.name}</h3>
-                  <p className="text-sm text-text-secondary mb-4">{member.goal}</p>
-
-                  {member.isChild && (
-                    <span className="inline-block px-3 py-1 bg-soft-yellow/20 text-soft-yellow text-xs rounded-full mb-4">
-                      儿童账户
-                    </span>
+                <div
+                  onClick={() => handleSelectMember(member.id)}
+                  className={cn(
+                    'focusable tv-card cursor-pointer hover:shadow-glow transition-all',
+                    currentMemberId === member.id && 'ring-2 ring-vibrant-orange shadow-glow'
                   )}
-
-                  <div className="flex justify-center gap-6 pt-4 border-t border-white/5">
-                    <div className="text-center">
-                      <p className="text-xl font-bold text-vibrant-orange">{member.streakDays}</p>
-                      <p className="text-xs text-text-secondary">连续天数</p>
+                >
+                  <div className="text-center pb-4">
+                    <div
+                      className={cn(
+                        'w-24 h-24 mx-auto rounded-full flex items-center justify-center text-5xl mb-4',
+                        member.isChild ? 'bg-soft-yellow/20' : 'bg-navy-medium'
+                      )}
+                    >
+                      {member.avatar}
                     </div>
-                    <div className="text-center">
-                      <p className="text-xl font-bold text-mint-green">{member.favorites.length}</p>
-                      <p className="text-xs text-text-secondary">收藏</p>
+                    <h3 className="text-xl font-bold text-white mb-1">{member.name}</h3>
+                    <p className="text-sm text-text-secondary mb-4">{member.goal}</p>
+
+                    {member.isChild && (
+                      <span className="inline-block px-3 py-1 bg-soft-yellow/20 text-soft-yellow text-xs rounded-full mb-4">
+                        儿童账户
+                      </span>
+                    )}
+
+                    <div className="flex justify-center gap-6 pt-4 border-t border-white/5">
+                      <div className="text-center">
+                        <p className="text-xl font-bold text-vibrant-orange">{streak}</p>
+                        <p className="text-xs text-text-secondary">连续天数</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xl font-bold text-mint-green">{member.favorites.length}</p>
+                        <p className="text-xs text-text-secondary">收藏</p>
+                      </div>
                     </div>
                   </div>
+
+                  {currentMemberId === member.id && (
+                    <div className="text-center pt-3 border-t border-white/5">
+                      <span className="inline-flex items-center gap-2 text-sm text-vibrant-orange">
+                        <Check className="w-4 h-4" />
+                        当前使用中
+                      </span>
+                    </div>
+                  )}
                 </div>
-
-                {currentMemberId === member.id && (
-                  <div className="text-center pt-3 border-t border-white/5">
-                    <span className="inline-flex items-center gap-2 text-sm text-vibrant-orange">
-                      <Check className="w-4 h-4" />
-                      当前使用中
-                    </span>
-                  </div>
-                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {/* 添加成员卡片 */}
           <div style={{ animationDelay: `${members.length * 0.1}s` }} className="animate-scale-in">

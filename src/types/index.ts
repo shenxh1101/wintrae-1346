@@ -6,6 +6,10 @@ export type DurationFilter = 'all' | 'short' | 'medium' | 'long';
 
 export type ExercisePhase = 'warmup' | 'main' | 'rest' | 'cooldown';
 
+export type WorkoutMode = 'normal' | 'skip-warmup' | 'main-only';
+
+export type ReportRange = 'week' | 'last-week' | 'month';
+
 export interface Exercise {
   id: string;
   name: string;
@@ -58,6 +62,7 @@ export interface WorkoutRecord {
   calories: number;
   totalExercises: number;
   completedExercises: number;
+  workoutMode?: WorkoutMode;
 }
 
 export interface WorkoutState {
@@ -79,6 +84,7 @@ export interface WeeklyStat {
 export interface WeeklyReport {
   memberId: string;
   memberName: string;
+  range: ReportRange;
   totalWorkouts: number;
   totalDuration: number;
   totalCalories: number;
@@ -91,5 +97,23 @@ export interface WeeklyReport {
   improvement: {
     durationChange: number;
     completionRateChange: number;
+    workoutCountChange: number;
   };
+}
+
+export interface PlanItem {
+  id: string;
+  memberId: string;
+  courseId: string;
+  courseTitle: string;
+  courseCover: string;
+  targetCount: number;
+  completedCount: number;
+  reminderTime?: string;
+  weekStart: string;
+}
+
+export interface FamilyPlan {
+  weekStart: string;
+  plans: PlanItem[];
 }

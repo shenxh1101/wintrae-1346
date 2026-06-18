@@ -1,12 +1,15 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Users, History, Dumbbell } from 'lucide-react';
 import { useMemberStore } from '@/stores/useMemberStore';
+import { useHistoryStore } from '@/stores/useHistoryStore';
 import { cn } from '@/lib/utils';
 
 export default function Navbar() {
   const location = useLocation();
-  const { getCurrentMember, childMode } = useMemberStore();
+  const { getCurrentMember, childMode, currentMemberId } = useMemberStore();
+  const { calculateStreakDays } = useHistoryStore();
   const currentMember = getCurrentMember();
+  const streakDays = calculateStreakDays(currentMemberId);
 
   const navItems = [
     { path: '/', label: '首页', icon: Home },
@@ -67,7 +70,7 @@ export default function Navbar() {
               <div className="text-left">
                 <p className="font-semibold text-white">{currentMember?.name}</p>
                 <p className="text-xs text-text-secondary">
-                  连续 {currentMember?.streakDays} 天
+                  连续 {streakDays} 天
                 </p>
               </div>
             </Link>

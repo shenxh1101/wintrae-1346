@@ -1,18 +1,21 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Clock, Flame, Star, Play, AlertTriangle, CheckCircle, Timer, Sun, Moon, Wind, Zap } from 'lucide-react';
+import { ArrowLeft, Clock, Flame, Star, Play, AlertTriangle, CheckCircle, Timer, Sun, Moon, Wind, Zap, ChevronRight } from 'lucide-react';
 import { useCourseStore } from '@/stores/useCourseStore';
 import { useMemberStore } from '@/stores/useMemberStore';
+import { useWorkoutStore } from '@/stores/useWorkoutStore';
 import { cn, formatTime, getDifficultyName, getDifficultyColor, getCategoryName } from '@/lib/utils';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 import { useState } from 'react';
-import { ExercisePhase } from '@/types';
+import { ExercisePhase, WorkoutMode } from '@/types';
 
 export default function CourseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getCourseById } = useCourseStore();
   const { isFavorite, toggleFavorite, childMode } = useMemberStore();
+  const { startWorkout } = useWorkoutStore();
   const [selectedExerciseIndex, setSelectedExerciseIndex] = useState(0);
+  const [workoutMode, setWorkoutMode] = useState<WorkoutMode>('normal');
 
   const course = getCourseById(id || '');
   const favorite = course ? isFavorite(course.id) : false;
@@ -21,7 +24,7 @@ export default function CourseDetail() {
     onBack: () => navigate('/'),
     onEnter: () => {
       if (course) {
-        navigate(`/workout/${course.id}`);
+        handleStartWorkout();
       }
     },
   });
@@ -57,11 +60,11 @@ export default function CourseDetail() {
 
   const selectedExercise = course.exercises[selectedExerciseIndex];
 
-  const phaseInfo: Record<ExercisePhase, { label: string; icon: any; color: string }> = {
-    warmup: { label: '热身', icon: Sun, color: 'text-yellow-400 bg-yellow-400/20' },
-    main: { label: '训练', icon: Zap, color: 'text-vibrant-orange bg-vibrant-orange/20' },
-    rest: { label: '休息', icon: Wind, color: 'text-mint-green bg-mint-green/20' },
-    cooldown: { label: '放松', icon: Moon, color: 'text-purple-400 bg-purple-400/20' },
+  const phaseInfo: Record<ExercisePhase, { label: string; icon: any; color: string; bgColor: string }> = {
+    warmup: { label: '热身', icon: Sun, color: 'text-yellow-400', bgColor: 'bg-yellow-400/20' },
+    main: { label: '训练', icon: Zap, color: 'text-vibrant-orange', bgColor: 'bg-vibrant-orange/20' },
+    rest: { label: '休息', icon: Wind, color: 'text-mint-green', bgColor: 'bg-mint-green/20' },
+    cooldown: { label: '放松', icon: Moon, color: 'text-purple-400', bgColor: 'bg-purple-400/20' },
   };
 
   const phaseStats = course.exercises.reduce((acc, ex) => {
@@ -76,6 +79,32 @@ export default function CourseDetail() {
 
   const totalSeconds = course.exercises.reduce((sum, ex) => sum + ex.duration, 0);
   const totalMinutes = Math.ceil(totalSeconds / 60);
+
+  const getModeDuration = (mode: WorkoutMode): number => {
+    if (mode === 'normal') return totalSeconds;
+    if (mode === 'skip-warmup') {
+      return course.exercises.filter(e => e.phase !== 'warmup').reduce((sum, e) => sum + e.duration, 0);
+    }
+    if (mode === 'main-only') {
+      return course.exercises.filter(e => e.phase === 'main').reduce((sum, e) => sum + e.duration, 0);
+    }
+    return totalSeconds;
+  };
+
+  const handleStartWorkout = () => {
+    if (course) {
+      startWorkout(course, workoutMode);
+      navigate(`/workout/${course.id}`);
+    }
+  };
+
+  const modeOptions = [
+    { id: 'normal', label: '完整训练', desc: '包含热身、训练和放松', duration: totalSeconds },
+    { id: 'skip-warmup', label: '跳过热身', desc: '直接进入主体训练', duration: getModeDuration('skip-warmup') },
+    { id: 'main-only', label: '只练主体', desc: '仅核心训练动作', duration: getModeDuration('main-only') },
+  ];
+
+  const orderedPhases: ExercisePhase[] = ['warmup', 'main', 'rest', 'cooldown'];
 
   return (
     <div className="min-h-screen bg-gradient-dark pt-24 pb-16">
@@ -126,22 +155,74 @@ export default function CourseDetail() {
                     {course.exercises.length} 个动作
                   </span>
                 </div>
-                {/* 阶段概览 */}
-                <div className="flex items-center gap-3 mt-4 flex-wrap">
-                  {Object.entries(phaseStats).map(([phase, stats]) => {
-                    const info = phaseInfo[phase as ExercisePhase];
-                    const Icon = info.icon;
-                    return (
-                      <span
-                        key={phase}
-                        className={cn('flex items-center gap-2 px-3 py-1 rounded-full text-sm', info.color)}
-                      >
-                        <Icon className="w-4 h-4" />
-                        {info.label} {formatTime(stats.duration)}
-                      </span>
-                    );
-                  })}
-                </div>
+              </div>
+            </div>
+
+            {/* 训练结构 */}
+            <div className="tv-card animate-slide-up" style={{ animationDelay: '0.05s' }}>
+              <h3 className="text-xl font-bold text-white mb-6">训练结构</h3>
+              <div className="flex items-stretch gap-2 mb-6">
+                {orderedPhases.map((phase) => {
+                  const stats = phaseStats[phase];
+                  if (!stats || stats.duration === 0) return null;
+                  const info = phaseInfo[phase];
+                  const Icon = info.icon;
+                  const percentage = (stats.duration / totalSeconds) * 100;
+                  
+                  return (
+                    <div
+                      key={phase}
+                      className="flex-1 flex flex-col items-center p-4 rounded-2xl bg-navy-medium/50"
+                      style={{ flex: percentage }}
+                    >
+                      <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center mb-3', info.bgColor)}>
+                        <Icon className={cn('w-6 h-6', info.color)} />
+                      </div>
+                      <p className="font-medium text-white">{info.label}</p>
+                      <p className="text-sm text-text-secondary mt-1">{formatTime(stats.duration)}</p>
+                      <p className="text-xs text-text-muted mt-0.5">{stats.count} 个动作</p>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* 时间轴 */}
+              <div className="relative h-2 bg-navy-medium rounded-full overflow-hidden mb-4">
+                {orderedPhases.reduce((offset, phase) => {
+                  const stats = phaseStats[phase];
+                  if (!stats || stats.duration === 0) return offset;
+                  const percentage = (stats.duration / totalSeconds) * 100;
+                  return offset;
+                }, 0)}
+                {orderedPhases.map((phase, idx) => {
+                  const stats = phaseStats[phase];
+                  if (!stats || stats.duration === 0) return null;
+                  const percentage = (stats.duration / totalSeconds) * 100;
+                  const colors: Record<ExercisePhase, string> = {
+                    warmup: 'from-yellow-400 to-yellow-500',
+                    main: 'from-vibrant-orange to-orange-hover',
+                    rest: 'from-mint-green to-teal-400',
+                    cooldown: 'from-purple-500 to-purple-400',
+                  };
+                  const prevPercentage = orderedPhases
+                    .slice(0, idx)
+                    .reduce((sum, p) => sum + (phaseStats[p]?.duration || 0) / totalSeconds * 100, 0);
+                  
+                  return (
+                    <div
+                      key={phase}
+                      className={cn('absolute top-0 bottom-0 bg-gradient-to-r', colors[phase])}
+                      style={{
+                        left: `${prevPercentage}%`,
+                        width: `${percentage}%`,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+              <div className="flex justify-between text-xs text-text-muted">
+                <span>0 分钟</span>
+                <span>{Math.ceil(totalSeconds / 60)} 分钟</span>
               </div>
             </div>
 
@@ -173,6 +254,9 @@ export default function CourseDetail() {
                       <div className="absolute top-2 left-2 w-8 h-8 rounded-full bg-deep-navy/80 flex items-center justify-center text-sm font-bold text-white">
                         {index + 1}
                       </div>
+                      <div className={cn('absolute top-2 right-2 px-2 py-0.5 rounded-full text-xs font-medium', phaseInfo[exercise.phase || 'main'].bgColor, phaseInfo[exercise.phase || 'main'].color)}>
+                        {phaseInfo[exercise.phase || 'main'].label}
+                      </div>
                     </div>
                   </button>
                 ))}
@@ -190,12 +274,15 @@ export default function CourseDetail() {
                   />
                 </div>
                 <div className="flex-1">
-                  <h4 className="text-2xl font-bold text-white mb-2">
-                    {selectedExercise.name}
-                    <span className="ml-3 text-lg text-vibrant-orange font-normal">
-                      {selectedExercise.duration} 秒
+                  <div className="flex items-center gap-3 mb-2">
+                    <h4 className="text-2xl font-bold text-white">{selectedExercise.name}</h4>
+                    <span className={cn('px-3 py-1 rounded-full text-sm font-medium', phaseInfo[selectedExercise.phase || 'main'].bgColor, phaseInfo[selectedExercise.phase || 'main'].color)}>
+                      {phaseInfo[selectedExercise.phase || 'main'].label}
                     </span>
-                  </h4>
+                  </div>
+                  <p className="text-lg text-vibrant-orange font-medium mb-4">
+                    {selectedExercise.duration} 秒
+                  </p>
                   <p className="text-text-secondary mb-4">{selectedExercise.description}</p>
                   {selectedExercise.tips && selectedExercise.tips.length > 0 && (
                     <div className="space-y-2">
@@ -215,10 +302,43 @@ export default function CourseDetail() {
 
           {/* 右侧：开始训练和注意事项 */}
           <div className="space-y-6">
-            {/* 开始训练按钮 */}
+            {/* 开始训练模式选择 */}
             <div className="tv-card animate-slide-up" style={{ animationDelay: '0.15s' }}>
+              <h3 className="text-lg font-bold text-white mb-4">选择训练模式</h3>
+              <div className="space-y-3 mb-6">
+                {modeOptions.map((mode) => (
+                  <button
+                    key={mode.id}
+                    onClick={() => setWorkoutMode(mode.id as WorkoutMode)}
+                    className={cn(
+                      'focusable w-full p-4 rounded-xl text-left transition-all',
+                      workoutMode === mode.id
+                        ? 'bg-vibrant-orange/20 border-2 border-vibrant-orange'
+                        : 'bg-navy-medium/50 border-2 border-transparent hover:bg-navy-medium'
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={cn(
+                        'font-medium',
+                        workoutMode === mode.id ? 'text-white' : 'text-text-secondary'
+                      )}>
+                        {mode.label}
+                      </span>
+                      <ChevronRight className={cn(
+                        'w-4 h-4 transition-transform',
+                        workoutMode === mode.id ? 'text-vibrant-orange rotate-90' : 'text-text-muted'
+                      )} />
+                    </div>
+                    <p className="text-sm text-text-muted mt-1">{mode.desc}</p>
+                    <p className="text-sm text-vibrant-orange mt-2">
+                      {formatTime(mode.duration)}
+                    </p>
+                  </button>
+                ))}
+              </div>
+              
               <button
-                onClick={() => navigate(`/workout/${course.id}`)}
+                onClick={handleStartWorkout}
                 className="focusable w-full py-5 rounded-2xl bg-gradient-to-r from-vibrant-orange to-orange-hover text-white text-xl font-bold flex items-center justify-center gap-3 transition-all hover:shadow-glow hover:scale-[1.02]"
               >
                 <Play className="w-7 h-7 fill-current" />
@@ -297,6 +417,7 @@ export default function CourseDetail() {
                         <p className="font-medium text-white truncate">{exercise.name}</p>
                         <span className={cn(
                           'flex-shrink-0 text-xs px-2 py-0.5 rounded-full',
+                          phaseInfo[exercise.phase || 'main'].bgColor,
                           phaseInfo[exercise.phase || 'main'].color
                         )}>
                           {phaseInfo[exercise.phase || 'main'].label}

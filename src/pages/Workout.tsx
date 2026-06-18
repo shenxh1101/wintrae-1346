@@ -1,13 +1,19 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Play, Pause, SkipBack, SkipForward, X, CheckCircle, Flame, Trophy, Clock, ArrowRight, Sun, Moon, Wind, Zap } from 'lucide-react';
+import { Play, Pause, SkipBack, SkipForward, X, CheckCircle, Flame, Trophy, Clock, ArrowRight, Sun, Moon, Wind, Zap, Settings } from 'lucide-react';
 import { useWorkoutStore } from '@/stores/useWorkoutStore';
 import { useCourseStore } from '@/stores/useCourseStore';
 import { useHistoryStore } from '@/stores/useHistoryStore';
 import { useMemberStore } from '@/stores/useMemberStore';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 import { formatTime, cn, getCategoryName } from '@/lib/utils';
-import { ExercisePhase } from '@/types';
+import { ExercisePhase, WorkoutMode } from '@/types';
+
+const workoutModeLabels: Record<WorkoutMode, string> = {
+  normal: '完整训练',
+  'skip-warmup': '跳过热身',
+  'main-only': '只练主体',
+};
 
 const phaseInfo: Record<ExercisePhase, { label: string; icon: any; color: string }> = {
   warmup: { label: '热身', icon: Sun, color: 'text-yellow-400 bg-yellow-400/20' },
@@ -26,6 +32,8 @@ export default function Workout() {
 
   const {
     course,
+    exercises,
+    workoutMode,
     currentExerciseIndex,
     currentTime,
     isPlaying,
@@ -144,11 +152,6 @@ export default function Workout() {
 
   const isLastSeconds = exerciseDuration - currentTime <= 3 && exerciseDuration - currentTime > 0;
 
-  const mainExerciseCount = course?.exercises.filter(e => e.phase === 'main').length || 0;
-  const completedMainExercises = course?.exercises
-    .slice(0, currentExerciseIndex + (isCompleted ? 0 : 0))
-    .filter(e => e.phase === 'main').length || 0;
-
   if (!course) {
     return (
       <div className="min-h-screen bg-deep-navy flex items-center justify-center">
@@ -172,7 +175,14 @@ export default function Workout() {
           
           <h1 className="text-5xl font-bold text-white mb-4">训练完成！</h1>
           <p className="text-xl text-text-secondary mb-2">{course.title}</p>
-          <p className="text-mint-green mb-10">太棒了，你完成了一次{getCategoryName(course.category)}训练</p>
+          <p className="text-mint-green mb-4">太棒了，你完成了一次{getCategoryName(course.category)}训练</p>
+          
+          {workoutMode !== 'normal' && (
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-mint-green/20 text-mint-green rounded-full text-sm mb-10">
+              <Settings className="w-4 h-4" />
+              {workoutModeLabels[workoutMode]}
+            </div>
+          )}
           
           <div className="grid grid-cols-3 gap-6 mb-10">
             <div className="tv-card text-center">
@@ -195,12 +205,7 @@ export default function Workout() {
           <div className="tv-card mb-10 text-left">
             <p className="text-text-secondary text-sm mb-2">训练动作</p>
             <p className="text-lg text-white">
-              完成 {totalCompletedExercises} / {course.exercises.length} 个动作
-              {mainExerciseCount > 0 && (
-                <span className="text-text-secondary text-base ml-2">
-                  (其中训练动作 {Math.min(completedMainExercises, mainExerciseCount)}/{mainExerciseCount})
-                </span>
-              )}
+              完成 {totalCompletedExercises} / {exercises.length} 个动作
             </p>
           </div>
 
@@ -238,7 +243,12 @@ export default function Workout() {
           <div>
             <h2 className="text-xl font-bold text-white">{course.title}</h2>
             <p className="text-text-secondary text-sm">
-              第 {currentExerciseIndex + 1} / {course.exercises.length} 个动作
+              第 {currentExerciseIndex + 1} / {exercises.length} 个动作
+              {workoutMode !== 'normal' && (
+                <span className="ml-2 text-mint-green">
+                  · {workoutModeLabels[workoutMode]}
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -265,7 +275,7 @@ export default function Workout() {
           {(['warmup', 'main', 'rest', 'cooldown'] as ExercisePhase[]).map((p) => {
             const info = phaseInfo[p];
             const Icon = info.icon;
-            const hasPhase = course.exercises.some(e => e.phase === p);
+            const hasPhase = exercises.some(e => e.phase === p);
             if (!hasPhase) return null;
             
             const isCurrent = currentPhase === p;

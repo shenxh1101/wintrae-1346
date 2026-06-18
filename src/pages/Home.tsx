@@ -1,10 +1,13 @@
 import { useMemo } from 'react';
-import { Sparkles, Clock, Flame, Zap, Wind, Dumbbell, Heart } from 'lucide-react';
+import { Sparkles, Clock, Flame, Zap, Wind, Dumbbell, Heart, Target, Calendar, ChevronRight } from 'lucide-react';
 import CourseCard from '@/components/CourseCard';
 import { useCourseStore } from '@/stores/useCourseStore';
 import { useMemberStore } from '@/stores/useMemberStore';
+import { useHistoryStore } from '@/stores/useHistoryStore';
+import { usePlanStore } from '@/stores/usePlanStore';
 import { cn, getCategoryName } from '@/lib/utils';
 import { CourseCategory, Difficulty, DurationFilter } from '@/types';
+import { useNavigate } from 'react-router-dom';
 
 const categories: { id: CourseCategory | 'all'; name: string; icon: any }[] = [
   { id: 'all', name: '全部', icon: Sparkles },
@@ -29,6 +32,7 @@ const durations: { id: DurationFilter; name: string; icon: any }[] = [
 ];
 
 export default function Home() {
+  const navigate = useNavigate();
   const {
     selectedCategory,
     selectedDifficulty,
@@ -40,9 +44,15 @@ export default function Home() {
     getRecommendedCourses,
   } = useCourseStore();
 
-  const { getCurrentMember, childMode } = useMemberStore();
+  const { getCurrentMember, childMode, currentMemberId } = useMemberStore();
+  const { calculateStreakDays } = useHistoryStore();
+  const { getThisWeekPlans, getWeeklyProgress } = usePlanStore();
+
   const currentMember = getCurrentMember();
   const recommended = getRecommendedCourses();
+  const streakDays = calculateStreakDays(currentMemberId);
+  const weekPlans = getThisWeekPlans(currentMemberId);
+  const weeklyProgress = getWeeklyProgress(currentMemberId);
 
   const filteredCourses = useMemo(() => {
     let courses = getFilteredCourses();
@@ -79,7 +89,7 @@ export default function Home() {
               </p>
               <div className="flex gap-6">
                 <div className="text-center">
-                  <p className="text-3xl font-bold text-vibrant-orange">{currentMember?.streakDays}</p>
+                  <p className="text-3xl font-bold text-vibrant-orange">{streakDays}</p>
                   <p className="text-sm text-text-secondary">连续天数</p>
                 </div>
                 <div className="w-px bg-white/10" />
@@ -87,6 +97,17 @@ export default function Home() {
                   <p className="text-3xl font-bold text-mint-green">{childFriendlyFavoritesCount}</p>
                   <p className="text-sm text-text-secondary">收藏课程</p>
                 </div>
+                {weekPlans.length > 0 && (
+                  <>
+                    <div className="w-px bg-white/10" />
+                    <div className="text-center">
+                      <p className="text-3xl font-bold text-soft-yellow">
+                        {weeklyProgress.completed}/{weeklyProgress.total}
+                      </p>
+                      <p className="text-sm text-text-secondary">本周计划</p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-30">
@@ -100,12 +121,84 @@ export default function Home() {
           </div>
         </section>
 
+        {/* 本周训练计划 */}
+        {weekPlans.length > 0 && (
+          <section className="mb-12 animate-slide-up" style={{ animationDelay: '0.05s' }}>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Target className="w-7 h-7 text-mint-green" />
+                <h2 className="text-2xl font-bold text-white">本周训练计划</h2>
+                <span className="px-3 py-1 bg-mint-green/20 text-mint-green text-sm rounded-full">
+                  {weeklyProgress.percentage}% 完成
+                </span>
+              </div>
+              <button
+                onClick={() => navigate('/family')}
+                className="flex items-center gap-2 text-text-secondary hover:text-white transition-colors"
+              >
+                管理计划
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-6">
+              {weekPlans.slice(0, 3).map((plan) => {
+                const percentage = Math.round((plan.completedCount / plan.targetCount) * 100);
+                const isCompleted = plan.completedCount >= plan.targetCount;
+                return (
+                  <div
+                    key={plan.id}
+                    className="tv-card hover:shadow-glow transition-all cursor-pointer group"
+                    onClick={() => navigate(`/course/${plan.courseId}`)}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-bold text-white group-hover:text-vibrant-orange transition-colors">
+                        {plan.courseTitle}
+                      </h3>
+                      <span className={cn(
+                        'text-lg font-bold',
+                        isCompleted ? 'text-mint-green' : 'text-vibrant-orange'
+                      )}>
+                        {plan.completedCount}/{plan.targetCount}
+                      </span>
+                    </div>
+
+                    <div className="h-2 bg-navy-medium rounded-full overflow-hidden mb-3">
+                      <div
+                        className={cn(
+                          'h-full rounded-full transition-all duration-500',
+                          isCompleted
+                            ? 'bg-gradient-to-r from-mint-green to-teal-400'
+                            : 'bg-gradient-to-r from-vibrant-orange to-orange-hover'
+                        )}
+                        style={{ width: `${Math.min(percentage, 100)}%` }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-text-muted">
+                        {isCompleted ? '🎉 已完成目标' : '继续加油！'}
+                      </span>
+                      {plan.reminderTime && (
+                        <span className="text-text-muted flex items-center gap-1">
+                          <Clock className="w-4 h-4" />
+                          {plan.reminderTime}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         {/* 今日推荐 */}
         <section className="mb-12 animate-slide-up" style={{ animationDelay: '0.1s' }}>
           <div className="flex items-center gap-3 mb-6">
             <Sparkles className="w-7 h-7 text-vibrant-orange" />
             <h2 className="text-2xl font-bold text-white">
-              {childMode ? '今日推荐' : '今日推荐'}
+              今日推荐
             </h2>
             {childMode && (
               <span className="px-3 py-1 bg-mint-green/20 text-mint-green text-sm rounded-full">

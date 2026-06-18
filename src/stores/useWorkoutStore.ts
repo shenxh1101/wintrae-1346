@@ -1,9 +1,21 @@
 import { create } from 'zustand';
-import { Exercise, Course, WorkoutRecord } from '@/types';
+import { Exercise, Course, WorkoutRecord, WorkoutMode } from '@/types';
+
+function getFilteredExercises(course: Course, mode: WorkoutMode): Exercise[] {
+  if (mode === 'normal') return course.exercises;
+  if (mode === 'skip-warmup') {
+    return course.exercises.filter((e) => e.phase !== 'warmup');
+  }
+  if (mode === 'main-only') {
+    return course.exercises.filter((e) => e.phase === 'main');
+  }
+  return course.exercises;
+}
 
 interface WorkoutState {
   course: Course | null;
   exercises: Exercise[];
+  workoutMode: WorkoutMode;
   currentExerciseIndex: number;
   currentTime: number;
   isPlaying: boolean;
@@ -11,7 +23,7 @@ interface WorkoutState {
   isCompleted: boolean;
   totalCompletedExercises: number;
   savedRecord: WorkoutRecord | null;
-  startWorkout: (course: Course) => void;
+  startWorkout: (course: Course, mode?: WorkoutMode) => void;
   pauseWorkout: () => void;
   resumeWorkout: () => void;
   nextExercise: () => void;
@@ -30,6 +42,7 @@ interface WorkoutState {
 export const useWorkoutStore = create<WorkoutState>((set, get) => ({
   course: null,
   exercises: [],
+  workoutMode: 'normal',
   currentExerciseIndex: 0,
   currentTime: 0,
   isPlaying: false,
@@ -38,10 +51,12 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
   totalCompletedExercises: 0,
   savedRecord: null,
 
-  startWorkout: (course) => {
+  startWorkout: (course, mode = 'normal') => {
+    const filteredExercises = getFilteredExercises(course, mode);
     set({
       course,
-      exercises: course.exercises,
+      exercises: filteredExercises,
+      workoutMode: mode,
       currentExerciseIndex: 0,
       currentTime: 0,
       isPlaying: true,
@@ -107,6 +122,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
     set({
       course: null,
       exercises: [],
+      workoutMode: 'normal',
       currentExerciseIndex: 0,
       currentTime: 0,
       isPlaying: false,
@@ -118,7 +134,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
   },
 
   completeWorkout: () => {
-    const { course, exercises, totalCompletedExercises, currentExerciseIndex, currentTime } = get();
+    const { course, exercises, totalCompletedExercises, currentExerciseIndex, currentTime, workoutMode } = get();
     if (!course) return null;
 
     const completedExerciseDuration = exercises
@@ -131,8 +147,13 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
 
     const totalCompletedSeconds = completedExerciseDuration + currentProgress;
     const totalDuration = exercises.reduce((sum, ex) => sum + ex.duration, 0);
-    const completionRate = Math.round((totalCompletedSeconds / totalDuration) * 100);
-    const calories = Math.round((totalCompletedSeconds / totalDuration) * course.calories);
+
+    const completionRate = Math.min(100, totalDuration > 0
+      ? Math.round((totalCompletedSeconds / totalDuration) * 100)
+      : 0);
+
+    const fullCourseDuration = course.exercises.reduce((sum, ex) => sum + ex.duration, 0);
+    const calories = Math.round((totalCompletedSeconds / fullCourseDuration) * course.calories);
 
     const actualCompletedExercises = totalCompletedExercises > 0
       ? totalCompletedExercises
@@ -150,6 +171,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
       calories,
       totalExercises: exercises.length,
       completedExercises: actualCompletedExercises,
+      workoutMode,
     };
 
     return record;
