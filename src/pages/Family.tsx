@@ -83,7 +83,11 @@ export default function Family() {
   };
 
   const getFavoriteCourses = (favorites: string[]) => {
-    return courses.filter((c) => favorites.includes(c.id));
+    let result = courses.filter((c) => favorites.includes(c.id));
+    if (childMode) {
+      result = result.filter((c) => c.isForChildren || c.difficulty === 'easy');
+    }
+    return result;
   };
 
   // 成员详情视图

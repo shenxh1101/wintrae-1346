@@ -1,10 +1,11 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Clock, Flame, Star, Play, AlertTriangle, CheckCircle, Timer } from 'lucide-react';
+import { ArrowLeft, Clock, Flame, Star, Play, AlertTriangle, CheckCircle, Timer, Sun, Moon, Wind, Zap } from 'lucide-react';
 import { useCourseStore } from '@/stores/useCourseStore';
 import { useMemberStore } from '@/stores/useMemberStore';
 import { cn, formatTime, getDifficultyName, getDifficultyColor, getCategoryName } from '@/lib/utils';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 import { useState } from 'react';
+import { ExercisePhase } from '@/types';
 
 export default function CourseDetail() {
   const { id } = useParams<{ id: string }>();
@@ -56,6 +57,26 @@ export default function CourseDetail() {
 
   const selectedExercise = course.exercises[selectedExerciseIndex];
 
+  const phaseInfo: Record<ExercisePhase, { label: string; icon: any; color: string }> = {
+    warmup: { label: '热身', icon: Sun, color: 'text-yellow-400 bg-yellow-400/20' },
+    main: { label: '训练', icon: Zap, color: 'text-vibrant-orange bg-vibrant-orange/20' },
+    rest: { label: '休息', icon: Wind, color: 'text-mint-green bg-mint-green/20' },
+    cooldown: { label: '放松', icon: Moon, color: 'text-purple-400 bg-purple-400/20' },
+  };
+
+  const phaseStats = course.exercises.reduce((acc, ex) => {
+    const phase = ex.phase || 'main';
+    if (!acc[phase]) {
+      acc[phase] = { count: 0, duration: 0 };
+    }
+    acc[phase].count++;
+    acc[phase].duration += ex.duration;
+    return acc;
+  }, {} as Record<ExercisePhase, { count: number; duration: number }>);
+
+  const totalSeconds = course.exercises.reduce((sum, ex) => sum + ex.duration, 0);
+  const totalMinutes = Math.ceil(totalSeconds / 60);
+
   return (
     <div className="min-h-screen bg-gradient-dark pt-24 pb-16">
       <div className="container mx-auto px-8">
@@ -91,10 +112,10 @@ export default function CourseDetail() {
 
               <div className="absolute bottom-6 left-6 right-6">
                 <h1 className="text-4xl font-bold text-white mb-4">{course.title}</h1>
-                <div className="flex items-center gap-6">
+                <div className="flex items-center gap-6 flex-wrap">
                   <span className="flex items-center gap-2 text-white">
                     <Clock className="w-5 h-5 text-vibrant-orange" />
-                    {course.duration} 分钟
+                    {totalMinutes} 分钟
                   </span>
                   <span className="flex items-center gap-2 text-white">
                     <Flame className="w-5 h-5 text-orange-400" />
@@ -104,6 +125,22 @@ export default function CourseDetail() {
                     <Timer className="w-5 h-5 text-mint-green" />
                     {course.exercises.length} 个动作
                   </span>
+                </div>
+                {/* 阶段概览 */}
+                <div className="flex items-center gap-3 mt-4 flex-wrap">
+                  {Object.entries(phaseStats).map(([phase, stats]) => {
+                    const info = phaseInfo[phase as ExercisePhase];
+                    const Icon = info.icon;
+                    return (
+                      <span
+                        key={phase}
+                        className={cn('flex items-center gap-2 px-3 py-1 rounded-full text-sm', info.color)}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {info.label} {formatTime(stats.duration)}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -256,7 +293,15 @@ export default function CourseDetail() {
                       {index + 1}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-white truncate">{exercise.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-white truncate">{exercise.name}</p>
+                        <span className={cn(
+                          'flex-shrink-0 text-xs px-2 py-0.5 rounded-full',
+                          phaseInfo[exercise.phase || 'main'].color
+                        )}>
+                          {phaseInfo[exercise.phase || 'main'].label}
+                        </span>
+                      </div>
                       <p className="text-sm text-text-secondary">{formatTime(exercise.duration)}</p>
                     </div>
                   </div>

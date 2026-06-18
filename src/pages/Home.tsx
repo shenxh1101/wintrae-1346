@@ -52,6 +52,16 @@ export default function Home() {
     return courses;
   }, [getFilteredCourses, childMode]);
 
+  const childFriendlyRecommended = useMemo(() => {
+    if (!childMode) return recommended;
+    return recommended.filter((c) => c.isForChildren || c.difficulty === 'easy');
+  }, [recommended, childMode]);
+
+  const childFriendlyFavoritesCount = useMemo(() => {
+    if (!childMode || !currentMember) return currentMember?.favorites.length || 0;
+    return currentMember.favorites.length;
+  }, [currentMember, childMode]);
+
   return (
     <div className="min-h-screen bg-gradient-dark pt-28 pb-16">
       <div className="container mx-auto px-8">
@@ -74,7 +84,7 @@ export default function Home() {
                 </div>
                 <div className="w-px bg-white/10" />
                 <div className="text-center">
-                  <p className="text-3xl font-bold text-mint-green">{currentMember?.favorites.length}</p>
+                  <p className="text-3xl font-bold text-mint-green">{childFriendlyFavoritesCount}</p>
                   <p className="text-sm text-text-secondary">收藏课程</p>
                 </div>
               </div>
@@ -91,25 +101,35 @@ export default function Home() {
         </section>
 
         {/* 今日推荐 */}
-        {!childMode && (
-          <section className="mb-12 animate-slide-up" style={{ animationDelay: '0.1s' }}>
-            <div className="flex items-center gap-3 mb-6">
-              <Sparkles className="w-7 h-7 text-vibrant-orange" />
-              <h2 className="text-2xl font-bold text-white">今日推荐</h2>
+        <section className="mb-12 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+          <div className="flex items-center gap-3 mb-6">
+            <Sparkles className="w-7 h-7 text-vibrant-orange" />
+            <h2 className="text-2xl font-bold text-white">
+              {childMode ? '今日推荐' : '今日推荐'}
+            </h2>
+            {childMode && (
+              <span className="px-3 py-1 bg-mint-green/20 text-mint-green text-sm rounded-full">
+                儿童友好
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-4 gap-6">
+            {(childMode ? childFriendlyRecommended : recommended).slice(0, 4).map((course, index) => (
+              <div
+                key={course.id}
+                style={{ animationDelay: `${0.1 + index * 0.1}s` }}
+                className="animate-scale-in"
+              >
+                <CourseCard course={course} />
+              </div>
+            ))}
+          </div>
+          {childMode && childFriendlyRecommended.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-text-secondary">暂无适合儿童的推荐课程</p>
             </div>
-            <div className="grid grid-cols-4 gap-6">
-              {recommended.slice(0, 4).map((course, index) => (
-                <div
-                  key={course.id}
-                  style={{ animationDelay: `${0.1 + index * 0.1}s` }}
-                  className="animate-scale-in"
-                >
-                  <CourseCard course={course} />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
+          )}
+        </section>
 
         {/* 分类筛选 */}
         <section className="mb-8 animate-slide-up" style={{ animationDelay: '0.2s' }}>
@@ -142,7 +162,7 @@ export default function Home() {
             <div className="flex items-center gap-3">
               <span className="text-text-secondary text-sm">难度：</span>
               <div className="flex gap-2">
-                {difficulties.map((diff) => (
+                {(childMode ? difficulties.filter(d => d.id === 'all' || d.id === 'easy') : difficulties).map((diff) => (
                   <button
                     key={diff.id}
                     onClick={() => setDifficulty(diff.id)}

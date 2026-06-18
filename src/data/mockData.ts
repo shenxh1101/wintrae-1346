@@ -9,7 +9,25 @@ const exerciseImages = [
   'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&h=600&fit=crop',
 ];
 
+function calcTotalMinutes(exercises: Exercise[]): number {
+  const totalSeconds = exercises.reduce((sum, ex) => sum + ex.duration, 0);
+  return Math.round(totalSeconds / 60);
+}
+
+function calcCalories(durationMinutes: number, intensity: 'low' | 'medium' | 'high'): number {
+  const perMinute = { low: 3, medium: 6, high: 10 };
+  return Math.round(durationMinutes * perMinute[intensity]);
+}
+
 const createStretchExercises = (): Exercise[] => [
+  {
+    id: 's_warmup',
+    name: '热身准备',
+    duration: 60,
+    description: '深呼吸，放松全身，为接下来的拉伸做好准备。缓慢转动头部和肩部。',
+    image: exerciseImages[0],
+    phase: 'warmup',
+  },
   {
     id: 's1',
     name: '颈部侧拉伸',
@@ -17,6 +35,7 @@ const createStretchExercises = (): Exercise[] => [
     description: '坐直身体，右手轻扶头部左侧，慢慢向右倾斜，感受左侧颈部拉伸。',
     image: exerciseImages[0],
     tips: ['保持呼吸均匀', '不要用力过猛', '每侧各做一次'],
+    phase: 'main',
   },
   {
     id: 's2',
@@ -25,6 +44,7 @@ const createStretchExercises = (): Exercise[] => [
     description: '双肩向前向后各做环绕运动，放松肩部肌肉。',
     image: exerciseImages[1],
     tips: ['动作要缓慢', '充分活动肩关节'],
+    phase: 'main',
   },
   {
     id: 's3',
@@ -32,6 +52,7 @@ const createStretchExercises = (): Exercise[] => [
     duration: 40,
     description: '双手在背后交叉，慢慢向上抬起，感受胸部拉伸。',
     image: exerciseImages[2],
+    phase: 'main',
   },
   {
     id: 's4',
@@ -39,6 +60,7 @@ const createStretchExercises = (): Exercise[] => [
     duration: 60,
     description: '四肢着地，交替做猫式和牛式，活动脊柱。',
     image: exerciseImages[3],
+    phase: 'main',
   },
   {
     id: 's5',
@@ -46,6 +68,7 @@ const createStretchExercises = (): Exercise[] => [
     duration: 40,
     description: '单脚站立，另一只脚向后弯曲，手握住脚踝，感受大腿前侧拉伸。',
     image: exerciseImages[4],
+    phase: 'main',
   },
   {
     id: 's6',
@@ -53,10 +76,27 @@ const createStretchExercises = (): Exercise[] => [
     duration: 45,
     description: '面对墙站立，一脚在前一脚在后，后腿伸直脚跟贴地，感受小腿拉伸。',
     image: exerciseImages[5],
+    phase: 'main',
+  },
+  {
+    id: 's_cooldown',
+    name: '放松调整',
+    duration: 60,
+    description: '站立或坐下，深呼吸，慢慢放松全身肌肉，感受身体的舒展。',
+    image: exerciseImages[0],
+    phase: 'cooldown',
   },
 ];
 
 const createFatburnExercises = (): Exercise[] => [
+  {
+    id: 'f_warmup',
+    name: '热身运动',
+    duration: 90,
+    description: '原地踏步，活动手腕脚踝，慢慢提升心率，为高强度训练做准备。',
+    image: exerciseImages[0],
+    phase: 'warmup',
+  },
   {
     id: 'f1',
     name: '原地高抬腿',
@@ -64,6 +104,15 @@ const createFatburnExercises = (): Exercise[] => [
     description: '原地快速高抬腿，保持核心收紧，手臂自然摆动。',
     image: exerciseImages[0],
     tips: ['保持呼吸节奏', '膝盖尽量抬高'],
+    phase: 'main',
+  },
+  {
+    id: 'f_rest1',
+    name: '休息一下',
+    duration: 20,
+    description: '原地慢走，调整呼吸，准备下一个动作。',
+    image: exerciseImages[5],
+    phase: 'rest',
   },
   {
     id: 'f2',
@@ -71,6 +120,15 @@ const createFatburnExercises = (): Exercise[] => [
     duration: 45,
     description: '双脚跳起同时双手向上击掌，落地时双脚分开。',
     image: exerciseImages[1],
+    phase: 'main',
+  },
+  {
+    id: 'f_rest2',
+    name: '休息一下',
+    duration: 20,
+    description: '深呼吸，放松一下腿部肌肉。',
+    image: exerciseImages[5],
+    phase: 'rest',
   },
   {
     id: 'f3',
@@ -79,6 +137,15 @@ const createFatburnExercises = (): Exercise[] => [
     description: '下蹲后用力跳起，落地时轻轻下蹲缓冲。',
     image: exerciseImages[2],
     tips: ['膝盖不要超过脚尖', '落地要轻'],
+    phase: 'main',
+  },
+  {
+    id: 'f_rest3',
+    name: '休息一下',
+    duration: 20,
+    description: '擦擦汗，调整呼吸，你做得很棒！',
+    image: exerciseImages[5],
+    phase: 'rest',
   },
   {
     id: 'f4',
@@ -86,6 +153,15 @@ const createFatburnExercises = (): Exercise[] => [
     duration: 60,
     description: '平板支撑姿势，交替快速向前抬腿，像登山一样。',
     image: exerciseImages[3],
+    phase: 'main',
+  },
+  {
+    id: 'f_rest4',
+    name: '休息一下',
+    duration: 20,
+    description: '保持站立，深呼吸，心率慢慢降下来。',
+    image: exerciseImages[5],
+    phase: 'rest',
   },
   {
     id: 'f5',
@@ -94,17 +170,27 @@ const createFatburnExercises = (): Exercise[] => [
     description: '从站立姿势下蹲，手脚撑地后跳成平板，再收回跳起。',
     image: exerciseImages[4],
     tips: ['全程保持核心收紧'],
+    phase: 'main',
   },
   {
-    id: 'f6',
-    name: '休息调整',
-    duration: 30,
-    description: '原地慢走调整呼吸，为下一组动作做准备。',
-    image: exerciseImages[5],
+    id: 'f_cooldown',
+    name: '冷身放松',
+    duration: 90,
+    description: '原地慢走，做一些简单的拉伸动作，让心率慢慢恢复正常。',
+    image: exerciseImages[0],
+    phase: 'cooldown',
   },
 ];
 
 const createStrengthExercises = (): Exercise[] => [
+  {
+    id: 'st_warmup',
+    name: '热身激活',
+    duration: 90,
+    description: '活动全身关节，做一些轻度的动态拉伸，激活肌肉群。',
+    image: exerciseImages[0],
+    phase: 'warmup',
+  },
   {
     id: 'st1',
     name: '标准俯卧撑',
@@ -112,6 +198,15 @@ const createStrengthExercises = (): Exercise[] => [
     description: '双手略宽于肩，身体成直线，屈肘下降再推起。',
     image: exerciseImages[0],
     tips: ['核心收紧', '不要塌腰'],
+    phase: 'main',
+  },
+  {
+    id: 'st_rest1',
+    name: '休息调整',
+    duration: 30,
+    description: '站立休息，甩甩手臂放松一下。',
+    image: exerciseImages[5],
+    phase: 'rest',
   },
   {
     id: 'st2',
@@ -119,6 +214,15 @@ const createStrengthExercises = (): Exercise[] => [
     duration: 60,
     description: '双脚与肩同宽，下蹲至大腿平行地面，再站起。',
     image: exerciseImages[1],
+    phase: 'main',
+  },
+  {
+    id: 'st_rest2',
+    name: '休息调整',
+    duration: 30,
+    description: '走动一下，放松腿部肌肉。',
+    image: exerciseImages[5],
+    phase: 'rest',
   },
   {
     id: 'st3',
@@ -127,6 +231,15 @@ const createStrengthExercises = (): Exercise[] => [
     description: '前臂和脚尖支撑身体，保持身体成一条直线。',
     image: exerciseImages[2],
     tips: ['不要抬臀过高', '保持呼吸均匀'],
+    phase: 'main',
+  },
+  {
+    id: 'st_rest3',
+    name: '休息调整',
+    duration: 30,
+    description: '跪坐休息，调整呼吸。',
+    image: exerciseImages[5],
+    phase: 'rest',
   },
   {
     id: 'st4',
@@ -134,6 +247,15 @@ const createStrengthExercises = (): Exercise[] => [
     duration: 50,
     description: '单脚向前迈出一大步，下蹲至前腿大腿平行地面。',
     image: exerciseImages[3],
+    phase: 'main',
+  },
+  {
+    id: 'st_rest4',
+    name: '休息调整',
+    duration: 30,
+    description: '放松一下，准备下一组动作。',
+    image: exerciseImages[5],
+    phase: 'rest',
   },
   {
     id: 'st5',
@@ -141,6 +263,15 @@ const createStrengthExercises = (): Exercise[] => [
     duration: 45,
     description: '仰卧，双手放耳侧，用腹部力量起身至肘部触碰膝盖。',
     image: exerciseImages[4],
+    phase: 'main',
+  },
+  {
+    id: 'st_rest5',
+    name: '休息调整',
+    duration: 30,
+    description: '平躺休息，深呼吸。',
+    image: exerciseImages[5],
+    phase: 'rest',
   },
   {
     id: 'st6',
@@ -148,10 +279,28 @@ const createStrengthExercises = (): Exercise[] => [
     duration: 40,
     description: '仰卧屈膝，双脚踩地，用力抬起臀部至身体成直线。',
     image: exerciseImages[5],
+    phase: 'main',
+  },
+  {
+    id: 'st_cooldown',
+    name: '冷身拉伸',
+    duration: 90,
+    description: '对主要训练肌群进行静态拉伸，帮助肌肉恢复。',
+    image: exerciseImages[0],
+    phase: 'cooldown',
   },
 ];
 
 const createNeckExercises = (): Exercise[] => [
+  {
+    id: 'n_warmup',
+    name: '颈部热身',
+    duration: 45,
+    description: '轻轻转动头部，前后左右各几次，让颈部肌肉慢慢活跃起来。',
+    image: exerciseImages[0],
+    tips: ['动作要慢', '不要用力过猛'],
+    phase: 'warmup',
+  },
   {
     id: 'n1',
     name: '颈部前屈后伸',
@@ -159,6 +308,7 @@ const createNeckExercises = (): Exercise[] => [
     description: '缓慢低头再抬头，充分活动颈部前后肌肉。',
     image: exerciseImages[0],
     tips: ['动作要慢', '不要用力过猛'],
+    phase: 'main',
   },
   {
     id: 'n2',
@@ -166,6 +316,7 @@ const createNeckExercises = (): Exercise[] => [
     duration: 30,
     description: '头部向左右两侧倾斜，感受颈部侧面拉伸。',
     image: exerciseImages[1],
+    phase: 'main',
   },
   {
     id: 'n3',
@@ -173,6 +324,7 @@ const createNeckExercises = (): Exercise[] => [
     duration: 40,
     description: '缓慢向左右转动头部，感受颈部旋转拉伸。',
     image: exerciseImages[2],
+    phase: 'main',
   },
   {
     id: 'n4',
@@ -180,6 +332,7 @@ const createNeckExercises = (): Exercise[] => [
     duration: 45,
     description: '双肩向上提至耳朵附近，保持几秒后放松。',
     image: exerciseImages[3],
+    phase: 'main',
   },
   {
     id: 'n5',
@@ -188,6 +341,7 @@ const createNeckExercises = (): Exercise[] => [
     description: '一手过头轻拉对侧头部，感受肩颈连接处拉伸。',
     image: exerciseImages[4],
     tips: ['每侧各做一次'],
+    phase: 'main',
   },
   {
     id: 'n6',
@@ -195,8 +349,22 @@ const createNeckExercises = (): Exercise[] => [
     duration: 30,
     description: '闭眼放松，轻轻做头部画圈运动，全面放松颈部。',
     image: exerciseImages[5],
+    phase: 'main',
+  },
+  {
+    id: 'n_cooldown',
+    name: '结束放松',
+    duration: 45,
+    description: '深呼吸，轻轻按摩颈部和肩部，享受放松的感觉。',
+    image: exerciseImages[0],
+    phase: 'cooldown',
   },
 ];
+
+const stretchExercises = createStretchExercises();
+const fatburnExercises = createFatburnExercises();
+const strengthExercises = createStrengthExercises();
+const neckExercises = createNeckExercises();
 
 export const mockCourses: Course[] = [
   {
@@ -204,8 +372,8 @@ export const mockCourses: Course[] = [
     title: '晨间唤醒拉伸',
     category: 'stretch',
     difficulty: 'easy',
-    duration: 10,
-    calories: 35,
+    duration: calcTotalMinutes(stretchExercises),
+    calories: calcCalories(calcTotalMinutes(stretchExercises), 'low'),
     cover: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&h=500&fit=crop',
     description: '温和的全身拉伸运动，唤醒沉睡的身体，为新的一天注入活力。适合所有年龄段的练习者。',
     tips: [
@@ -214,16 +382,19 @@ export const mockCourses: Course[] = [
       '如果感到疼痛请立即停止',
     ],
     suitableFor: ['初学者', '老年人', '办公室人群'],
-    exercises: createStretchExercises(),
+    exercises: stretchExercises,
     isForChildren: true,
+    warmupDuration: 60,
+    cooldownDuration: 60,
+    restBetweenExercises: 0,
   },
   {
     id: 'c2',
     title: '高效燃脂HIIT',
     category: 'fatburn',
     difficulty: 'hard',
-    duration: 25,
-    calories: 280,
+    duration: calcTotalMinutes(fatburnExercises),
+    calories: calcCalories(calcTotalMinutes(fatburnExercises), 'high'),
     cover: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&h=500&fit=crop',
     description: '高强度间歇训练，快速提升心率，高效燃烧脂肪。适合有一定运动基础的人士。',
     tips: [
@@ -232,15 +403,18 @@ export const mockCourses: Course[] = [
       '运动后记得拉伸放松',
     ],
     suitableFor: ['有运动基础者', '减脂人群'],
-    exercises: createFatburnExercises(),
+    exercises: fatburnExercises,
+    warmupDuration: 90,
+    cooldownDuration: 90,
+    restBetweenExercises: 20,
   },
   {
     id: 'c3',
     title: '全身力量训练',
     category: 'strength',
     difficulty: 'medium',
-    duration: 30,
-    calories: 200,
+    duration: calcTotalMinutes(strengthExercises),
+    calories: calcCalories(calcTotalMinutes(strengthExercises), 'medium'),
     cover: 'https://images.unsplash.com/photo-1581009146145-b5ef050c2e1e?w=800&h=500&fit=crop',
     description: '通过自重训练锻炼全身主要肌群，提升基础力量，塑造完美体型。',
     tips: [
@@ -249,15 +423,18 @@ export const mockCourses: Course[] = [
       '训练间隔建议休息48小时',
     ],
     suitableFor: ['初学者', '健身爱好者'],
-    exercises: createStrengthExercises(),
+    exercises: strengthExercises,
+    warmupDuration: 90,
+    cooldownDuration: 90,
+    restBetweenExercises: 30,
   },
   {
     id: 'c4',
     title: '肩颈放松舒缓',
     category: 'neck',
     difficulty: 'easy',
-    duration: 8,
-    calories: 20,
+    duration: calcTotalMinutes(neckExercises),
+    calories: calcCalories(calcTotalMinutes(neckExercises), 'low'),
     cover: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&h=500&fit=crop',
     description: '专门针对肩颈僵硬问题设计，缓解办公疲劳，预防颈椎病。',
     tips: [
@@ -266,8 +443,11 @@ export const mockCourses: Course[] = [
       '配合深呼吸效果更好',
     ],
     suitableFor: ['办公室人群', '学生', '老年人'],
-    exercises: createNeckExercises(),
+    exercises: neckExercises,
     isForChildren: true,
+    warmupDuration: 45,
+    cooldownDuration: 45,
+    restBetweenExercises: 0,
   },
   {
     id: 'c5',
@@ -284,8 +464,11 @@ export const mockCourses: Course[] = [
       '保持环境安静舒适',
     ],
     suitableFor: ['失眠人群', '压力大者'],
-    exercises: createStretchExercises(),
+    exercises: stretchExercises,
     isForChildren: true,
+    warmupDuration: 60,
+    cooldownDuration: 120,
+    restBetweenExercises: 0,
   },
   {
     id: 'c6',
@@ -302,7 +485,10 @@ export const mockCourses: Course[] = [
       '配合饮食控制效果更好',
     ],
     suitableFor: ['减脂人群', '健身爱好者'],
-    exercises: createFatburnExercises(),
+    exercises: fatburnExercises.slice(0, 8),
+    warmupDuration: 90,
+    cooldownDuration: 60,
+    restBetweenExercises: 25,
   },
   {
     id: 'c7',
@@ -319,7 +505,10 @@ export const mockCourses: Course[] = [
       '建议每周练习3-4次',
     ],
     suitableFor: ['有基础者', '运动员'],
-    exercises: createStrengthExercises(),
+    exercises: strengthExercises.slice(3, 10),
+    warmupDuration: 60,
+    cooldownDuration: 60,
+    restBetweenExercises: 20,
   },
   {
     id: 'c8',
@@ -328,7 +517,7 @@ export const mockCourses: Course[] = [
     difficulty: 'easy',
     duration: 5,
     calories: 15,
-    cover: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800&h=500&fit=crop',
+    cover: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=500&fit=crop',
     description: '专为办公室人群设计的简短肩颈放松操，工作间隙随时练习。',
     tips: [
       '工作中每小时做一次',
@@ -336,8 +525,11 @@ export const mockCourses: Course[] = [
       '动作轻柔不要用力',
     ],
     suitableFor: ['办公室人群', '程序员'],
-    exercises: createNeckExercises().slice(0, 4),
+    exercises: neckExercises.slice(0, 5),
     isForChildren: true,
+    warmupDuration: 30,
+    cooldownDuration: 30,
+    restBetweenExercises: 0,
   },
 ];
 
@@ -388,7 +580,14 @@ export const mockMembers: FamilyMember[] = [
   },
 ];
 
-const generateRecords = (memberId: string, courseId: string, courseTitle: string, category: string, daysAgo: number): WorkoutRecord => {
+const generateRecords = (
+  memberId: string,
+  courseId: string,
+  courseTitle: string,
+  category: string,
+  daysAgo: number,
+  difficulty?: string
+): WorkoutRecord => {
   const date = new Date(Date.now() - daysAgo * 86400000);
   const completionRate = Math.floor(Math.random() * 30) + 70;
   const duration = Math.floor(Math.random() * 10) + 15;
@@ -415,17 +614,26 @@ export const mockRecords: WorkoutRecord[] = [
   generateRecords('m1', 'c4', '肩颈放松舒缓', 'neck', 4),
   generateRecords('m1', 'c3', '全身力量训练', 'strength', 5),
   generateRecords('m1', 'c1', '晨间唤醒拉伸', 'stretch', 6),
-  
+  generateRecords('m1', 'c2', '高效燃脂HIIT', 'fatburn', 8),
+  generateRecords('m1', 'c7', '核心力量训练', 'strength', 10),
+  generateRecords('m1', 'c6', '脂肪杀手训练', 'fatburn', 12),
+  generateRecords('m1', 'c1', '晨间唤醒拉伸', 'stretch', 14),
+
   generateRecords('m2', 'c1', '晨间唤醒拉伸', 'stretch', 0),
   generateRecords('m2', 'c5', '睡前放松拉伸', 'stretch', 1),
   generateRecords('m2', 'c4', '肩颈放松舒缓', 'neck', 2),
   generateRecords('m2', 'c6', '脂肪杀手训练', 'fatburn', 4),
   generateRecords('m2', 'c5', '睡前放松拉伸', 'stretch', 5),
-  
+  generateRecords('m2', 'c1', '晨间唤醒拉伸', 'stretch', 7),
+  generateRecords('m2', 'c4', '肩颈放松舒缓', 'neck', 9),
+  generateRecords('m2', 'c5', '睡前放松拉伸', 'stretch', 11),
+
   generateRecords('m3', 'c1', '晨间唤醒拉伸', 'stretch', 1),
   generateRecords('m3', 'c4', '肩颈放松舒缓', 'neck', 2),
   generateRecords('m3', 'c8', '办公室肩颈保健', 'neck', 4),
-  
+  generateRecords('m3', 'c1', '晨间唤醒拉伸', 'stretch', 6),
+  generateRecords('m3', 'c4', '肩颈放松舒缓', 'neck', 10),
+
   generateRecords('m4', 'c1', '晨间唤醒拉伸', 'stretch', 0),
   generateRecords('m4', 'c4', '肩颈放松舒缓', 'neck', 1),
   generateRecords('m4', 'c5', '睡前放松拉伸', 'stretch', 2),
@@ -436,4 +644,6 @@ export const mockRecords: WorkoutRecord[] = [
   generateRecords('m4', 'c8', '办公室肩颈保健', 'neck', 7),
   generateRecords('m4', 'c1', '晨间唤醒拉伸', 'stretch', 8),
   generateRecords('m4', 'c4', '肩颈放松舒缓', 'neck', 9),
+  generateRecords('m4', 'c5', '睡前放松拉伸', 'stretch', 11),
+  generateRecords('m4', 'c1', '晨间唤醒拉伸', 'stretch', 13),
 ];

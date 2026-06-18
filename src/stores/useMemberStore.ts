@@ -15,6 +15,8 @@ interface MemberState {
   toggleFavorite: (courseId: string) => void;
   isFavorite: (courseId: string) => boolean;
   toggleChildMode: () => void;
+  recordWorkout: (memberId: string) => void;
+  calculateStreak: (memberId: string) => number;
 }
 
 export const useMemberStore = create<MemberState>()(
@@ -58,7 +60,7 @@ export const useMemberStore = create<MemberState>()(
       },
 
       toggleFavorite: (courseId) => {
-        const { currentMemberId, members } = get();
+        const { currentMemberId } = get();
         set((state) => ({
           members: state.members.map((m) => {
             if (m.id !== currentMemberId) return m;
@@ -80,6 +82,57 @@ export const useMemberStore = create<MemberState>()(
 
       toggleChildMode: () =>
         set((state) => ({ childMode: !state.childMode })),
+
+      recordWorkout: (memberId) => {
+        const today = new Date().toISOString().split('T')[0];
+        const member = get().members.find((m) => m.id === memberId);
+        if (!member) return;
+
+        const newStreak = member.lastWorkoutDate === today
+          ? member.streakDays
+          : get().calculateStreak(memberId) + 1;
+
+        set((state) => ({
+          members: state.members.map((m) =>
+            m.id === memberId
+              ? {
+                  ...m,
+                  lastWorkoutDate: today,
+                  streakDays: newStreak,
+                }
+              : m
+          ),
+        }));
+      },
+
+      calculateStreak: (memberId) => {
+        const member = get().members.find((m) => m.id === memberId);
+        if (!member) return 0;
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        let streak = 0;
+        let checkDate = new Date(today);
+        
+        const hasWorkoutOnDate = (dateStr: string) => {
+          return member.lastWorkoutDate === dateStr;
+        };
+
+        for (let i = 0; i < 365; i++) {
+          const dateStr = checkDate.toISOString().split('T')[0];
+          if (hasWorkoutOnDate(dateStr)) {
+            streak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+          } else if (i === 0) {
+            checkDate.setDate(checkDate.getDate() - 1);
+          } else {
+            break;
+          }
+        }
+
+        return streak;
+      },
     }),
     {
       name: 'member-storage',

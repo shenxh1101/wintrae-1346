@@ -4,6 +4,8 @@ export type Difficulty = 'easy' | 'medium' | 'hard';
 
 export type DurationFilter = 'all' | 'short' | 'medium' | 'long';
 
+export type ExercisePhase = 'warmup' | 'main' | 'rest' | 'cooldown';
+
 export interface Exercise {
   id: string;
   name: string;
@@ -11,6 +13,7 @@ export interface Exercise {
   description: string;
   image: string;
   tips?: string[];
+  phase?: ExercisePhase;
 }
 
 export interface Course {
@@ -26,6 +29,9 @@ export interface Course {
   suitableFor: string[];
   exercises: Exercise[];
   isForChildren?: boolean;
+  warmupDuration?: number;
+  cooldownDuration?: number;
+  restBetweenExercises?: number;
 }
 
 export interface FamilyMember {
@@ -67,4 +73,23 @@ export interface WeeklyStat {
   day: string;
   duration: number;
   date: string;
+  workoutCount: number;
+}
+
+export interface WeeklyReport {
+  memberId: string;
+  memberName: string;
+  totalWorkouts: number;
+  totalDuration: number;
+  totalCalories: number;
+  avgCompletionRate: number;
+  favoriteCategory: CourseCategory | null;
+  categoryBreakdown: { category: CourseCategory; count: number; duration: number }[];
+  dailyStats: WeeklyStat[];
+  streakDays: number;
+  advice: string;
+  improvement: {
+    durationChange: number;
+    completionRateChange: number;
+  };
 }
